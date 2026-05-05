@@ -73,7 +73,7 @@ EOF
 RUN dnf -y --nodocs --setopt=install_weak_deps=False \
   install \
   bash ca-certificates libatomic libstdc++ libgcc sudo hwdata pciutils \
-  intel-oneapi-runtime-dpcpp-cpp intel-oneapi-runtime-mkl \
+  intel-oneapi-runtime-dpcpp-cpp intel-oneapi-runtime-mkl intel-oneapi-umf \
   intel-compute-runtime intel-level-zero oneapi-level-zero \
   procps-ng vim rsync \
   && dnf clean all && rm -rf /var/cache/dnf/*
@@ -85,6 +85,7 @@ COPY --from=builder /usr/local/ /usr/local/
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
   && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
   && echo "/opt/intel/oneapi/redist/lib" > /etc/ld.so.conf.d/oneapi.conf \
+  && ls -d /opt/intel/oneapi/umf/*/lib >> /etc/ld.so.conf.d/oneapi.conf || true \
   && ldconfig \
   && cp -n /usr/local/lib/lib*.so* /usr/lib64/ 2>/dev/null || true \
   && cp -n /usr/local/lib64/lib*.so* /usr/lib64/ 2>/dev/null || true \
