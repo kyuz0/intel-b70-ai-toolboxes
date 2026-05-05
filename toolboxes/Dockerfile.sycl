@@ -19,7 +19,7 @@ RUN dnf -y --nodocs --setopt=install_weak_deps=False \
   install \
   make gcc gcc-c++ cmake ninja-build lld clang clang-devel compiler-rt \
   intel-oneapi-compiler-dpcpp-cpp intel-oneapi-mkl-devel \
-  intel-compute-runtime level-zero level-zero-devel \
+  intel-compute-runtime intel-level-zero intel-level-zero-devel oneapi-level-zero oneapi-level-zero-devel \
   git-core vim sudo rsync patch \
   && dnf clean all && rm -rf /var/cache/dnf/*
 
@@ -75,7 +75,7 @@ RUN microdnf -y --nodocs --setopt=install_weak_deps=0 \
   install \
   bash ca-certificates libatomic libstdc++ libgcc sudo \
   intel-oneapi-runtime-dpcpp-cpp intel-oneapi-runtime-mkl \
-  intel-compute-runtime level-zero \
+  intel-compute-runtime intel-level-zero oneapi-level-zero \
   procps-ng vim rsync \
   && microdnf clean all && rm -rf /var/cache/dnf/*
 
