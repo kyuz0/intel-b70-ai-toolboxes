@@ -84,6 +84,7 @@ COPY --from=builder /usr/local/ /usr/local/
 # ld
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
   && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
+  && echo "/opt/intel/oneapi/redist/lib" > /etc/ld.so.conf.d/oneapi.conf \
   && ldconfig \
   && cp -n /usr/local/lib/lib*.so* /usr/lib64/ 2>/dev/null || true \
   && cp -n /usr/local/lib64/lib*.so* /usr/lib64/ 2>/dev/null || true \
