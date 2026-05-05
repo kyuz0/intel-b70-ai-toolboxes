@@ -82,6 +82,8 @@ RUN microdnf -y --nodocs --setopt=install_weak_deps=0 \
 # copy
 COPY --from=builder /usr/local/ /usr/local/
 COPY --from=builder /usr/bin/llama-* /usr/local/bin/
+COPY --from=builder /usr/lib64/libllama*.so* /usr/lib64/
+COPY --from=builder /usr/lib64/libggml*.so* /usr/lib64/
 
 # ld
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
