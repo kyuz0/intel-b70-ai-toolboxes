@@ -5,6 +5,11 @@ MODEL_DIR="$(realpath ~/models)"
 RESULTDIR="$(realpath ~/llamacpp-bench-b70)"
 mkdir -p "$RESULTDIR"
 
+RUN_64K=0
+if [[ "${1:-}" == "--64k" ]]; then
+  RUN_64K=1
+fi
+
 # Capture system info
 if [[ ! -f "$RESULTDIR/system_info.json" ]]; then
     python3 -c '
@@ -80,7 +85,12 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
         EXTRA_ARGS=( -fa 1 )
       fi
 
-      for CTX in default longctx32768 longctx65536; do
+      CTX_LIST=( default longctx32768 )
+      if (( RUN_64K == 1 )); then
+        CTX_LIST+=( longctx65536 )
+      fi
+
+      for CTX in "${CTX_LIST[@]}"; do
         CTX_SUFFIX=""
         CTX_ARGS=()
         if [[ "$CTX" == longctx32768 ]]; then
