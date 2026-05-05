@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Intel Arc B70 — Backend Benchmarks (Grid View)</title>
+    <link rel="stylesheet" href="assets/index2.css">
+    <script defer data-domain="kyuz0.github.io/intel-b70-ai-toolboxes" src="https://plausible.skybound.link/js/plausible.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Intel Arc B70 “Battlemage” — Benchmark Grid</h1>
+        <p>Linux Workstation · Intel Arc B70</p>
+        <p id="sys-info">Fedora 42 · Linux 6.18.0-0.rc5.243.vanilla.fc42.x86_64 · llama.cpp build 1c398dc9e (7034)</p>
+        <p id="run-info">Benchmarks captured 14 Nov 2025 · Repo: <a
+                href="https://github.com/kyuz0/intel-b70-ai-toolboxes" target="_blank"
+                rel="noreferrer">kyuz0/intel-b70-ai-toolboxes</a></p>
+    </header>
+
+    <section class="controls">
+        <div class="control">
+            <label for="filter-search">Search models</label>
+            <input id="filter-search" type="text" placeholder="e.g. llama, qwen, 30B…">
+        </div>
+        <div class="control">
+            <label for="filter-quant">Quant</label>
+            <select id="filter-quant">
+                <option value="">Any</option>
+            </select>
+        </div>
+        <div class="control grow slider-block">
+            <label>Context windows</label>
+            <div id="context-chips" class="chip-row tight"></div>
+        </div>
+        <div class="control grow slider-block">
+            <label>Model params (B)</label>
+            <div class="range-wrap">
+                <input type="range" id="sizeLo" step="1">
+                <input type="range" id="sizeHi" step="1">
+                <div class="range-track" id="sizeTrack"></div>
+            </div>
+            <div class="range-values">
+                <span id="sizeLoVal">0B</span> – <span id="sizeHiVal">0B</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel compact">
+        <div class="panel-split">
+            <div class="backend-header">
+                <div class="backend-label">
+                    <label>Backends</label>
+                    <div class="backend-actions">
+                        <button type="button" id="backend-all" class="chip small">All</button>
+                        <button type="button" id="backend-none" class="chip small">None</button>
+                    </div>
+                </div>
+                <div id="backend-list" class="backend-list"></div>
+            </div>
+            <div class="stats-box">
+                <div class="stat-line" id="stats-line">Loading…</div>
+                <button id="reset-layout" type="button" class="chip small">Reset filters</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel compact" id="tables-panel">
+        <div id="tables"></div>
+    </section>
+
+
+
+
+    <script src="assets/index2.js" type="module"></script>
+</body>
+
+</html>
