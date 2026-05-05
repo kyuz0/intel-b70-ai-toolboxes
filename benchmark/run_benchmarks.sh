@@ -61,8 +61,8 @@ done
 echo
 
 declare -A CMDS=(
-  [sycl]="ONEAPI_DEVICE_SELECTOR=level_zero:gpu toolbox run -c llama-sycl -- /usr/local/bin/llama-bench"
-  [vulkan]="VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/intel_icd.x86_64.json toolbox run -c llama-vulkan -- /usr/local/bin/llama-bench"
+  [sycl]="env ONEAPI_DEVICE_SELECTOR=level_zero:gpu toolbox run -c llama-sycl -- /usr/local/bin/llama-bench"
+  [vulkan]="env VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/intel_icd.x86_64.json toolbox run -c llama-vulkan -- /usr/local/bin/llama-bench"
 )
 
 for MODEL_PATH in "${MODEL_PATHS[@]}"; do
