@@ -44,11 +44,10 @@ RUN git clean -xdf \
   -DLLAMA_BUILD_EXAMPLES=ON \
   -DLLAMA_BUILD_SERVER=ON \
   && cmake --build build --config Release \
-  && cmake --install build --config Release --prefix /usr
+  && cmake --install build --config Release
 
 # libs
-RUN find /opt/llama.cpp/build -type f -name 'lib*.so*' -exec cp {} /usr/lib64/ \; \
-  && ldconfig
+RUN ldconfig
 
 # helper
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
@@ -81,15 +80,13 @@ RUN microdnf -y --nodocs --setopt=install_weak_deps=0 \
 
 # copy
 COPY --from=builder /usr/local/ /usr/local/
-COPY --from=builder /usr/bin/llama-* /usr/local/bin/
-COPY --from=builder /usr/lib64/libllama*.so* /usr/lib64/
-COPY --from=builder /usr/lib64/libggml*.so* /usr/lib64/
 
 # ld
 RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
   && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
   && ldconfig \
-  && cp -n /usr/local/lib/libllama*.so* /usr/lib64/ 2>/dev/null || true \
+  && cp -n /usr/local/lib/lib*.so* /usr/lib64/ 2>/dev/null || true \
+  && cp -n /usr/local/lib64/lib*.so* /usr/lib64/ 2>/dev/null || true \
   && ldconfig
 
 # helper
