@@ -126,13 +126,13 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
           continue
         fi
 
-        FULL_CMD=( timeout 10m $CMD_EFFECTIVE -ngl 99 -mmp 0 -m "$MODEL_PATH" "${EXTRA_ARGS[@]}" "${CTX_ARGS[@]}" -r "$CTX_REPS" )
+        FULL_CMD=( $CMD_EFFECTIVE -ngl 99 -mmp 0 -m "$MODEL_PATH" "${EXTRA_ARGS[@]}" "${CTX_ARGS[@]}" -r "$CTX_REPS" )
 
         printf "\n▶ [%s] %s%s%s\n" "$ENV" "$MODEL_NAME" "${SUFFIX:+ $SUFFIX}" "${CTX_SUFFIX:+ $CTX_SUFFIX}"
         printf "  → log: %s\n" "$OUT"
         printf "  → cmd: %s\n\n" "${FULL_CMD[*]}"
 
-        if ! "${FULL_CMD[@]}" >"$OUT" 2>&1; then
+        if ! "${FULL_CMD[@]}" < /dev/null >"$OUT" 2>&1; then
           status=$?
           echo "✖ ! [${ENV}] ${MODEL_NAME}${SUFFIX}${CTX_SUFFIX:+ $CTX_SUFFIX} failed (exit ${status})" >>"$OUT"
           echo "  * [${ENV}] ${MODEL_NAME}${SUFFIX}${CTX_SUFFIX:+ $CTX_SUFFIX} : FAILED"
