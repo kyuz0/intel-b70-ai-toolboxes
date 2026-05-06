@@ -72,7 +72,7 @@ EOF
 # runtime deps
 RUN dnf -y --nodocs --setopt=install_weak_deps=False \
   install \
-  bash ca-certificates libatomic libstdc++ libgcc sudo hwdata pciutils \
+  bash ca-certificates libatomic libstdc++ libgcc sudo hwdata pciutils python3 \
   intel-oneapi-runtime-dpcpp-cpp intel-oneapi-runtime-mkl intel-oneapi-umf \
   intel-compute-runtime intel-level-zero oneapi-level-zero \
   procps-ng vim rsync \

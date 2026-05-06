@@ -85,7 +85,7 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
         EXTRA_ARGS=( -fa 1 )
       fi
 
-      CTX_LIST=( default longctx32768 )
+      CTX_LIST=( default longctx16384 )
       if (( RUN_64K == 1 )); then
         CTX_LIST+=( longctx65536 )
       fi
@@ -93,9 +93,9 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
       for CTX in "${CTX_LIST[@]}"; do
         CTX_SUFFIX=""
         CTX_ARGS=()
-        if [[ "$CTX" == longctx32768 ]]; then
-          CTX_SUFFIX="__longctx32768"
-          CTX_ARGS=( -p 2048 -n 32 -d 32768 -ub 512 )
+        if [[ "$CTX" == longctx16384 ]]; then
+          CTX_SUFFIX="__longctx16384"
+          CTX_ARGS=( -p 2048 -n 32 -d 16384 -ub 512 )
         elif [[ "$CTX" == longctx65536 ]]; then
           CTX_SUFFIX="__longctx65536"
           CTX_ARGS=( -p 2048 -n 32 -d 65536 -ub 512 )
@@ -103,8 +103,22 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
 
         OUT="$RESULTDIR/${MODEL_NAME}__${ENV}${SUFFIX}${CTX_SUFFIX}.log"
         CTX_REPS=5
-        if [[ "$CTX" == longctx32768 ]] || [[ "$CTX" == longctx65536 ]]; then
+        if [[ "$CTX" == longctx16384 ]] || [[ "$CTX" == longctx65536 ]]; then
           CTX_REPS=3
+        fi
+
+        # VRAM Gatekeeper
+        CTX_NUM=512
+        if [[ "$CTX" == longctx16384 ]]; then CTX_NUM=16384; fi
+        if [[ "$CTX" == longctx32768 ]]; then CTX_NUM=32768; fi
+        if [[ "$CTX" == longctx65536 ]]; then CTX_NUM=65536; fi
+        
+        EST_GB=$(toolbox run -c llama-sycl -- /usr/local/bin/gguf-vram-estimator.py "$MODEL_PATH" -c $CTX_NUM 2>/dev/null | awk -F '|' '/^[ \t]*[0-9,]+[ \t]*\|/ {print $3}' | awk '{print $1}' | head -n1)
+        if [[ -n "$EST_GB" ]]; then
+          if (( $(awk -v est="$EST_GB" 'BEGIN {print (est > 31.5) ? 1 : 0}') )); then
+            echo "⏭️  Skipping [${ENV}] ${MODEL_NAME}${SUFFIX}${CTX_SUFFIX:+ ($CTX_SUFFIX)}: Est VRAM ${EST_GB} GiB exceeds Intel Arc B70 limits (31.5 GiB max)"
+            continue
+          fi
         fi
 
         if [[ -s "$OUT" ]]; then
@@ -112,7 +126,7 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
           continue
         fi
 
-        FULL_CMD=( $CMD_EFFECTIVE -ngl 99 -mmp 0 -m "$MODEL_PATH" "${EXTRA_ARGS[@]}" "${CTX_ARGS[@]}" -r "$CTX_REPS" )
+        FULL_CMD=( timeout 10m $CMD_EFFECTIVE -ngl 99 -mmp 0 -m "$MODEL_PATH" "${EXTRA_ARGS[@]}" "${CTX_ARGS[@]}" -r "$CTX_REPS" )
 
         printf "\n▶ [%s] %s%s%s\n" "$ENV" "$MODEL_NAME" "${SUFFIX:+ $SUFFIX}" "${CTX_SUFFIX:+ $CTX_SUFFIX}"
         printf "  → log: %s\n" "$OUT"
