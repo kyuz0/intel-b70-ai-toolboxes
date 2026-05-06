@@ -95,20 +95,10 @@ for MODEL_PATH in "${MODEL_PATHS[@]}"; do
         CTX_ARGS=()
         if [[ "$CTX" == longctx32768 ]]; then
           CTX_SUFFIX="__longctx32768"
-          CTX_ARGS=( -p 2048 -n 32 -d 32768 )
-          if [[ "$ENV" == *vulkan* ]]; then
-            CTX_ARGS+=( -ub 512 )
-          else
-            CTX_ARGS+=( -ub 2048 )
-          fi
+          CTX_ARGS=( -p 2048 -n 32 -d 32768 -ub 512 )
         elif [[ "$CTX" == longctx65536 ]]; then
           CTX_SUFFIX="__longctx65536"
-          CTX_ARGS=( -p 2048 -n 32 -d 65536 )
-          if [[ "$ENV" == *vulkan* ]]; then
-            CTX_ARGS+=( -ub 512 )
-          else
-            CTX_ARGS+=( -ub 2048 )
-          fi
+          CTX_ARGS=( -p 2048 -n 32 -d 65536 -ub 512 )
         fi
 
         OUT="$RESULTDIR/${MODEL_NAME}__${ENV}${SUFFIX}${CTX_SUFFIX}.log"
