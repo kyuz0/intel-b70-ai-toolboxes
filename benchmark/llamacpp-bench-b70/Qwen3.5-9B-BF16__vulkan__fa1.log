@@ -1,0 +1,8 @@
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = Intel(R) Graphics (BMG G31) (Intel open-source Mesa driver) | uma: 0 | fp16: 1 | bf16: 1 | warp size: 32 | shared memory: 131072 | int dot: 1 | matrix cores: KHR_coopmat
+| model                          |       size |     params | backend    | ngl | fa | mmap |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | -: | ---: | --------------: | -------------------: |
+| qwen35 9B BF16                 |  16.68 GiB |     8.95 B | Vulkan     |  99 |  1 |    0 |           pp512 |        702.03 ± 0.90 |
+| qwen35 9B BF16                 |  16.68 GiB |     8.95 B | Vulkan     |  99 |  1 |    0 |           tg128 |         28.17 ± 0.01 |
+
+build: 74d6248f7 (9039)

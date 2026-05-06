@@ -1,0 +1,4 @@
+main: error: failed to load model '/home/kyuz0/models/gemma-4-31B-it-UD-Q8_K_XL.gguf'
+| model                          |       size |     params | backend    | ngl | fa | mmap |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | -: | ---: | --------------: | -------------------: |
+✖ ! [sycl] gemma-4-31B-it-UD-Q8_K_XL__fa1 __longctx16384 failed (exit 0)

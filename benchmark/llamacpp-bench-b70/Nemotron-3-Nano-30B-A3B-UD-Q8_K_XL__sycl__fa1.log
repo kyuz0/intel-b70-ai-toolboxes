@@ -1,0 +1,4 @@
+main: error: failed to load model '/home/kyuz0/models/Nemotron-3-Nano-30B-A3B-UD-Q8_K_XL.gguf'
+| model                          |       size |     params | backend    | ngl | fa | mmap |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | -: | ---: | --------------: | -------------------: |
+✖ ! [sycl] Nemotron-3-Nano-30B-A3B-UD-Q8_K_XL__fa1 failed (exit 0)

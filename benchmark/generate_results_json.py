@@ -3,7 +3,7 @@ import re, glob, os, json, time
 from pathlib import Path
 
 RESULT_SOURCES = [
-    ("/home/kyuz0/llamacpp-bench-b70", False),       # regular single-node runs
+    ("llamacpp-bench-b70", False),       # regular single-node runs
 ]
 OUT_JSON = "../docs/results.json"
 

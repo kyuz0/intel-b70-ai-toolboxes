@@ -1,0 +1,6 @@
+| model                          |       size |     params | backend    | ngl | fa | mmap |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | --: | -: | ---: | --------------: | -------------------: |
+| nemotron_h_moe 31B.A3.5B Q4_K - Medium |  21.26 GiB |    31.58 B | SYCL       |  99 |  1 |    0 |           pp512 |        657.26 ± 5.96 |
+| nemotron_h_moe 31B.A3.5B Q4_K - Medium |  21.26 GiB |    31.58 B | SYCL       |  99 |  1 |    0 |           tg128 |         30.20 ± 0.01 |
+
+build: 74d6248f7 (9039)
