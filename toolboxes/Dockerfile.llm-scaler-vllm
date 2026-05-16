@@ -1,0 +1,25 @@
+FROM intel/llm-scaler-vllm:1.3
+
+# Install standard packages for toolbox/distrobox support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    passwd \
+    curl \
+    wget \
+    vim \
+    nano \
+    pciutils \
+    dialog \
+    bash-completion \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add any custom configuration or scripts
+COPY vllm_scripts/99-toolbox-banner.sh /etc/profile.d/99-toolbox-banner.sh
+COPY vllm_scripts/start_vllm.py /opt/start_vllm.py
+COPY vllm_scripts/models.py /opt/models.py
+
+RUN chmod +x /etc/profile.d/99-toolbox-banner.sh /opt/start_vllm.py && \
+    ln -s /opt/start_vllm.py /usr/local/bin/start-vllm
+
+# Set bash as the default entrypoint, required for toolbox/distrobox
+CMD ["/bin/bash"]

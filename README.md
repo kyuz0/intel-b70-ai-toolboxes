@@ -1,6 +1,6 @@
-# Intel B70 Llama.cpp Toolboxes
+# Intel B70 Llama.cpp & vLLM Toolboxes
 
-This project provides pre-built containers (“toolboxes”) for running LLMs on **Intel Arc B70** (and other modern Intel GPUs) using `llama.cpp`. Toolbx is the standard developer container system in Fedora (and works on Ubuntu, openSUSE, Arch, etc).
+This project provides pre-built containers (“toolboxes”) for running LLMs on **Intel Arc B70** (and other modern Intel GPUs) using `llama.cpp` and `vLLM`. Toolbx is the standard developer container system in Fedora (and works on Ubuntu, openSUSE, Arch, etc).
 
 ---
 
@@ -15,12 +15,13 @@ This project provides pre-built containers (“toolboxes”) for running LLMs on
 
 You can check the containers on DockerHub: [kyuz0/intel-b70-ai-toolboxes](https://hub.docker.com/r/kyuz0/intel-b70-ai-toolboxes/tags).
 
-| Container Tag | Backend/Stack | Purpose / Notes |
+| Container / Repo | Backend/Stack | Purpose / Notes |
 | :--- | :--- | :--- |
-| `sycl` | Intel oneAPI SYCL | Native Intel backend. Fastest generation performance, utilizes Level Zero. Requires Intel oneAPI Base Toolkit components installed inside the container. |
-| `vulkan` | Vulkan (Mesa/Intel) | Universal backend using Vulkan. Recommended for compatibility across different host setups and older Intel hardware. |
+| `kyuz0/intel-b70-ai-toolboxes:sycl` | Intel oneAPI SYCL | Native Intel backend for llama.cpp. Fastest generation performance, utilizes Level Zero. Requires Intel oneAPI Base Toolkit components installed inside the container. |
+| `kyuz0/intel-b70-ai-toolboxes:vulkan` | Vulkan (Mesa/Intel) | Universal backend for llama.cpp using Vulkan. Recommended for compatibility across different host setups and older Intel hardware. |
+| `kyuz0/intel-b70-vllm-toolbox:dev` | Intel vLLM Scaler | Official Intel vLLM stack optimized for Arc Pro B70, featuring an interactive TUI launcher (`start-vllm`). |
 
-> These containers are **automatically** rebuilt whenever the Llama.cpp master branch is updated.
+> The Llama.cpp containers are **automatically** rebuilt whenever the Llama.cpp master branch is updated. The vLLM container can be rebuilt using the provided GitHub action.
 
 ## Quick Start
 
@@ -44,27 +45,45 @@ toolbox create llama-sycl \
 toolbox enter llama-sycl
 ```
 
+**Option C: vLLM (Intel Scaler)** - best for high-throughput serving
+```sh
+toolbox create vllm \
+  --image docker.io/kyuz0/intel-b70-vllm-toolbox:dev \
+  -- --device /dev/dri --shm-size 200g --security-opt seccomp=unconfined --env no_proxy=localhost,127.0.0.1
+
+toolbox enter vllm
+```
+
+> **Tip:** You can also use the included `./refresh-toolboxes.sh [all|llama-vulkan|llama-sycl|vllm]` script to automate the container pulling and creation process.
+
 ### 2. Check GPU Access
 Inside the toolbox:
 ```sh
-# For SYCL
+# For SYCL / vLLM
 llama-cli --list-devices
-
-# You can also run the Level Zero info utility included
+# or
 sycl-ls
 ```
 
 ### 3. Run Inference
+
+**For Llama.cpp toolboxes:**
 Download your GGUF models and run them natively.
 
-**Server Mode (API):**
+*Server Mode (API):*
 ```sh
 llama-server -m models/your-model.gguf -c 8192 -ngl 999
 ```
 
-**CLI Mode:**
+*CLI Mode:*
 ```sh
 llama-cli -ngl 999 -m models/your-model.gguf -p "Write a haiku about Intel graphics."
+```
+
+**For vLLM toolbox:**
+The vLLM toolbox comes with an interactive TUI. Simply run:
+```sh
+start-vllm
 ```
 
 ## Host Configuration
