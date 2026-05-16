@@ -11,15 +11,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pciutils \
     dialog \
     bash-completion \
+    libcap2-bin \
+    libnss-myhostname \
+    iproute2 \
     && rm -rf /var/lib/apt/lists/*
+
+# Unset any entrypoint from the base image so toolbox can inject its own
+ENTRYPOINT []
 
 # Add any custom configuration or scripts
 COPY vllm_scripts/99-toolbox-banner.sh /etc/profile.d/99-toolbox-banner.sh
 COPY vllm_scripts/start_vllm.py /opt/start_vllm.py
 COPY vllm_scripts/models.py /opt/models.py
+COPY vllm_scripts/run_vllm_bench.py /opt/run_vllm_bench.py
 
-RUN chmod +x /etc/profile.d/99-toolbox-banner.sh /opt/start_vllm.py && \
-    ln -s /opt/start_vllm.py /usr/local/bin/start-vllm
+RUN chmod +x /etc/profile.d/99-toolbox-banner.sh /opt/start_vllm.py /opt/run_vllm_bench.py && \
+    ln -s /opt/start_vllm.py /usr/local/bin/start-vllm && \
+    ln -s /opt/run_vllm_bench.py /usr/local/bin/run-vllm-bench
 
 # Set bash as the default entrypoint, required for toolbox/distrobox
 CMD ["/bin/bash"]

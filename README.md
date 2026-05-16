@@ -29,32 +29,32 @@ Create and enter your toolbox of choice. **(Ubuntu users: remember to use `distr
 
 **Option A: Vulkan (Intel ANV)** - best for compatibility
 ```sh
-toolbox create llama-vulkan \
+toolbox create b70-llama-vulkan \
   --image docker.io/kyuz0/intel-b70-ai-toolboxes:vulkan \
   -- --device /dev/dri --group-add video --group-add render --security-opt seccomp=unconfined
 
-toolbox enter llama-vulkan
+toolbox enter b70-llama-vulkan
 ```
 
 **Option B: SYCL (Native Intel)** - best for performance
 ```sh
-toolbox create llama-sycl \
+toolbox create b70-llama-sycl \
   --image docker.io/kyuz0/intel-b70-ai-toolboxes:sycl \
   -- --device /dev/dri --group-add video --group-add render --group-add sudo --security-opt seccomp=unconfined
 
-toolbox enter llama-sycl
+toolbox enter b70-llama-sycl
 ```
 
 **Option C: vLLM (Intel Scaler)** - best for high-throughput serving
 ```sh
-toolbox create vllm \
+toolbox create b70-vllm \
   --image docker.io/kyuz0/intel-b70-vllm-toolbox:dev \
   -- --device /dev/dri --shm-size 200g --security-opt seccomp=unconfined --env no_proxy=localhost,127.0.0.1
 
-toolbox enter vllm
+toolbox enter b70-vllm
 ```
 
-> **Tip:** You can also use the included `./refresh-toolboxes.sh [all|llama-vulkan|llama-sycl|vllm]` script to automate the container pulling and creation process.
+> **Tip:** You can also use the included `./refresh-toolboxes.sh [all|b70-llama-vulkan|b70-llama-sycl|b70-vllm]` script to automate the container pulling and creation process.
 
 ### 2. Check GPU Access
 Inside the toolbox:

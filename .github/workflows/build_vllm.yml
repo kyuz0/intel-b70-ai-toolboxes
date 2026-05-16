@@ -6,7 +6,7 @@ on:
       tag:
         description: "Image tag to publish (e.g. dev)"
         required: true
-        default: "dev"
+        default: "latest"
 
 env:
   IMAGE_REPO: kyuz0/intel-b70-vllm-toolbox
