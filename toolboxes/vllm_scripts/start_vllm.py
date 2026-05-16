@@ -129,7 +129,9 @@ def configure_and_launch(model_idx, gpu_count):
         "--dtype", "bfloat16",
         "--block-size", "64",
         "--disable-log-requests",
-        "--no-enable-prefix-caching"
+        "--no-enable-prefix-caching",
+        "--enable-chunked-prefill",
+        "--disable-custom-all-reduce"
     ]
     
     if config.get("trust_remote"): cmd.append("--trust-remote-code")

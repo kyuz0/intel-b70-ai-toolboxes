@@ -2,7 +2,7 @@
 Centralized model execution profiles for B70 vLLM toolbox.
 """
 
-GPU_UTIL = "0.95"
+GPU_UTIL = "0.90"
 OFF_NUM_PROMPTS = 500 
 OFF_FORCED_OUTPUT = "512"
 DEFAULT_BATCH_TOKENS = "8192"
@@ -12,7 +12,8 @@ B70_ENV = {
     "VLLM_MLA_DISABLE": "1",
     "VLLM_USE_V1": "1",
     "VLLM_ENGINE_READY_TIMEOUT_S": "600",
-    "VLLM_NO_USAGE_STATS": "1"
+    "VLLM_NO_USAGE_STATS": "1",
+    "VLLM_WORKER_MULTIPROC_METHOD": "spawn"
 }
 
 MODEL_TABLE = {
@@ -20,7 +21,7 @@ MODEL_TABLE = {
     "meta-llama/Meta-Llama-3.1-8B-Instruct": {
         "trust_remote": False,
         "valid_tp": [1],
-        "max_num_seqs": "64",
+        "max_num_seqs": "128",
         "max_tokens": "32768",
         "ctx": "65536",
         "env": B70_ENV

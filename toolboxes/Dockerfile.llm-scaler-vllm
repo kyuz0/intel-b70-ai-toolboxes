@@ -1,4 +1,7 @@
-FROM intel/llm-scaler-vllm:1.3
+FROM intel/llm-scaler-vllm:0.14.0-b8.2.1
+
+# Prevent python from picking up host packages in ~/.local when toolbox mounts the home directory
+ENV PYTHONNOUSERSITE=1
 
 # Install standard packages for toolbox/distrobox support
 RUN apt-get update && apt-get install -y --no-install-recommends \
