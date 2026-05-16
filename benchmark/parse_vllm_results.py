@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 # Config
-BENCHMARK_DIR = Path("vllm-benchs")
+BENCHMARK_DIR = Path("vllm_benchmark_results_b70")
 OUTPUT_FILE = Path("../docs/vllm-results.json")
 
 # Regex to parse model name for quantization and parameters

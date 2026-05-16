@@ -21,7 +21,7 @@ MODEL_TABLE = {
     "meta-llama/Meta-Llama-3.1-8B-Instruct": {
         "trust_remote": False,
         "valid_tp": [1],
-        "max_num_seqs": "128",
+        "max_num_seqs": "64",
         "max_tokens": "32768",
         "ctx": "65536",
         "env": B70_ENV
@@ -51,81 +51,16 @@ MODEL_TABLE = {
         "env": B70_ENV
     },
 
-    # 4. Qwen 3.5 35B GPTQ
-    "btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit": {
-        "trust_remote": True,
-        "valid_tp": [1],
-        "max_num_seqs": "32",
-        "max_tokens": "16384",
-        "ctx": "20480",
-        "language_model_only": True,
-        "env": B70_ENV
-    },
-
-    # 5. Gemma 4 26B AutoRound
-    "Intel/gemma-4-26B-A4B-it-int4-mixed-AutoRound": {
-        "trust_remote": True,
-        "valid_tp": [1],
-        "max_num_seqs": "32",
-        "max_tokens": "2048",
-        "ctx": "8192",
-        "language_model_only": True,
-        "enforce_eager": True,
-        "gpu_util": "0.95",
-        "kv_cache_dtype": "fp8",
-        "env": B70_ENV
-    },
-
-    # 6. Gemma 4 31B AWQ
-    "cyankiwi/gemma-4-31B-it-AWQ-4bit": {
-        "trust_remote": True,
-        "valid_tp": [1],
-        "max_num_seqs": "32",
-        "max_tokens": "2048",
-        "ctx": "4096",
-        "language_model_only": True,
-        "enforce_eager": True,
-        "gpu_util": "0.90",
-        "kv_cache_dtype": "fp8",
-        "env": B70_ENV
-    },
-
-    # 7. Qwen 3.5 27B AWQ
-    "cyankiwi/Qwen3.6-27B-AWQ-INT4": {
-        "trust_remote": True,
-        "valid_tp": [1],
-        "max_num_seqs": "32",
-        "max_tokens": "16384",
-        "ctx": "20480",
-        "language_model_only": True,
-        "enforce_eager": True,
-        "gpu_util": "0.95",
-        "env": B70_ENV
-    },
-
-    # 8. Qwen 3.5 35B AWQ
-    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit": {
+    # 4. GLM 4.7 Flash 30B GPTQ
+    "FayeQuant/GLM-4.7-Flash-GPTQ-4bit": {
         "trust_remote": True,
         "valid_tp": [1],
         "max_num_seqs": "16",
-        "max_tokens": "4096",
-        "ctx": "4096",
-        "language_model_only": True,
-        "gpu_util": "0.99",
-        "env": B70_ENV
-    },
-
-    # 9. Gemma 4 26B AWQ
-    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit": {
-        "trust_remote": True,
-        "valid_tp": [1],
-        "max_num_seqs": "32",
-        "max_tokens": "2048",
-        "ctx": "8192",
+        "max_tokens": "1024",
+        "ctx": "1536",
         "language_model_only": True,
         "enforce_eager": True,
-        "gpu_util": "0.90",
-        "kv_cache_dtype": "fp8",
+        "gpu_util": "0.98",
         "env": B70_ENV
     }
 }
@@ -134,10 +69,5 @@ MODELS_TO_RUN = [
     "meta-llama/Meta-Llama-3.1-8B-Instruct",
     "Qwen/Qwen3.5-9B",
     "btbtyler09/Qwen3.6-27B-GPTQ-4bit",
-    "btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit",
-    "Intel/gemma-4-26B-A4B-it-int4-mixed-AutoRound",
-    "cyankiwi/gemma-4-31B-it-AWQ-4bit",
-    "cyankiwi/Qwen3.6-27B-AWQ-INT4",
-    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit"
+    "FayeQuant/GLM-4.7-Flash-GPTQ-4bit"
 ]
