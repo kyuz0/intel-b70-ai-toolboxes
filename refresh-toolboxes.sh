@@ -7,7 +7,7 @@ declare -A TOOLBOXES
 
 TOOLBOXES["b70-llama-vulkan"]="docker.io/kyuz0/intel-b70-ai-toolboxes:vulkan --device /dev/dri --group-add video --group-add render --security-opt seccomp=unconfined"
 TOOLBOXES["b70-llama-sycl"]="docker.io/kyuz0/intel-b70-ai-toolboxes:sycl --device /dev/dri --group-add video --group-add render --group-add sudo --security-opt seccomp=unconfined"
-TOOLBOXES["b70-vllm"]="docker.io/kyuz0/intel-b70-vllm-toolbox:dev --device /dev/dri --shm-size 200g --security-opt seccomp=unconfined --env no_proxy=localhost,127.0.0.1"
+TOOLBOXES["b70-vllm"]="docker.io/kyuz0/intel-b70-vllm-toolbox:latest --device /dev/dri --shm-size 200g --security-opt seccomp=unconfined --env no_proxy=localhost,127.0.0.1"
 
 function usage() {
   echo "Usage: $0 [all|toolbox-name1 toolbox-name2 ...]"
