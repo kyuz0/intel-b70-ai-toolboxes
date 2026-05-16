@@ -88,6 +88,45 @@ MODEL_TABLE = {
         "gpu_util": "0.90",
         "kv_cache_dtype": "fp8",
         "env": B70_ENV
+    },
+
+    # 7. Qwen 3.5 27B AWQ
+    "cyankiwi/Qwen3.6-27B-AWQ-INT4": {
+        "trust_remote": True,
+        "valid_tp": [1],
+        "max_num_seqs": "32",
+        "max_tokens": "16384",
+        "ctx": "20480",
+        "language_model_only": True,
+        "enforce_eager": True,
+        "gpu_util": "0.95",
+        "env": B70_ENV
+    },
+
+    # 8. Qwen 3.5 35B AWQ
+    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit": {
+        "trust_remote": True,
+        "valid_tp": [1],
+        "max_num_seqs": "16",
+        "max_tokens": "4096",
+        "ctx": "4096",
+        "language_model_only": True,
+        "gpu_util": "0.99",
+        "env": B70_ENV
+    },
+
+    # 9. Gemma 4 26B AWQ
+    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit": {
+        "trust_remote": True,
+        "valid_tp": [1],
+        "max_num_seqs": "32",
+        "max_tokens": "2048",
+        "ctx": "8192",
+        "language_model_only": True,
+        "enforce_eager": True,
+        "gpu_util": "0.90",
+        "kv_cache_dtype": "fp8",
+        "env": B70_ENV
     }
 }
 
@@ -97,5 +136,8 @@ MODELS_TO_RUN = [
     "btbtyler09/Qwen3.6-27B-GPTQ-4bit",
     "btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit",
     "Intel/gemma-4-26B-A4B-it-int4-mixed-AutoRound",
-    "cyankiwi/gemma-4-31B-it-AWQ-4bit"
+    "cyankiwi/gemma-4-31B-it-AWQ-4bit",
+    "cyankiwi/Qwen3.6-27B-AWQ-INT4",
+    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
+    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit"
 ]

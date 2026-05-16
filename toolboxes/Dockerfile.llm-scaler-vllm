@@ -1,4 +1,4 @@
-FROM intel/llm-scaler-vllm:latest
+FROM intel/llm-scaler-vllm:0.14.0-b8.2.1
 
 # Prevent python from picking up host packages in ~/.local when toolbox mounts the home directory
 ENV PYTHONNOUSERSITE=1
