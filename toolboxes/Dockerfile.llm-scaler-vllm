@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcap2-bin \
     libnss-myhostname \
     iproute2 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && UID_USER=$(getent passwd 1000 | cut -d: -f1) \
+    && if [ -n "$UID_USER" ]; then userdel -r "$UID_USER"; fi
 
 # Unset any entrypoint from the base image so toolbox can inject its own
 ENTRYPOINT []
