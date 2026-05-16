@@ -38,8 +38,8 @@ MODEL_TABLE = {
         "env": B70_ENV
     },
 
-    # 3. Qwen 3.5 27B (Native FP16)
-    "cyankiwi/Qwen3.6-27B-AWQ-INT4": {
+    # 3. Qwen 3.5 27B GPTQ
+    "btbtyler09/Qwen3.6-27B-GPTQ-4bit": {
         "trust_remote": True,
         "valid_tp": [1],
         "max_num_seqs": "32",
@@ -51,8 +51,8 @@ MODEL_TABLE = {
         "env": B70_ENV
     },
 
-    # 4. Qwen 3.5 35B AWQ
-    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit": {
+    # 4. Qwen 3.5 35B GPTQ
+    "btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit": {
         "trust_remote": True,
         "valid_tp": [1],
         "max_num_seqs": "32",
@@ -62,8 +62,8 @@ MODEL_TABLE = {
         "env": B70_ENV
     },
 
-    # 5. Gemma 4 26B AWQ
-    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit": {
+    # 5. Gemma 4 26B AutoRound
+    "Intel/gemma-4-26B-A4B-it-int4-mixed-AutoRound": {
         "trust_remote": True,
         "valid_tp": [1],
         "max_num_seqs": "32",
@@ -71,7 +71,7 @@ MODEL_TABLE = {
         "ctx": "8192",
         "language_model_only": True,
         "enforce_eager": True,
-        "gpu_util": "0.90",
+        "gpu_util": "0.95",
         "kv_cache_dtype": "fp8",
         "env": B70_ENV
     },
@@ -94,8 +94,8 @@ MODEL_TABLE = {
 MODELS_TO_RUN = [
     "meta-llama/Meta-Llama-3.1-8B-Instruct",
     "Qwen/Qwen3.5-9B",
-    "cyankiwi/Qwen3.6-27B-AWQ-INT4",
-    "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-    "cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit",
+    "btbtyler09/Qwen3.6-27B-GPTQ-4bit",
+    "btbtyler09/Qwen3.6-35B-A3B-GPTQ-4bit",
+    "Intel/gemma-4-26B-A4B-it-int4-mixed-AutoRound",
     "cyankiwi/gemma-4-31B-it-AWQ-4bit"
 ]

@@ -109,7 +109,8 @@ def get_model_args(model, tp_size, overrides=None):
         "--max-num-seqs", str(max_seq_override),
         "--no-enable-prefix-caching",
         "--enable-chunked-prefill",
-        "--disable-custom-all-reduce"
+        "--disable-custom-all-reduce",
+        "--allow-deprecated-quantization"
     ]
     
     ctx = overrides.get("ctx", config.get("ctx"))
