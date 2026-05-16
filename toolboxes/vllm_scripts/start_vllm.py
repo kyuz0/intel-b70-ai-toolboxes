@@ -27,7 +27,10 @@ def check_dependencies():
 
 def detect_gpus():
     try:
-        return len(list(Path("/dev/dri").glob("renderD*")))
+        count = 0
+        for path in Path("/sys/class/drm").glob("renderD*/device/vendor"):
+            if "0x8086" in path.read_text(): count += 1
+        return count if count > 0 else 1
     except:
         return 1
 
@@ -136,6 +139,8 @@ def configure_and_launch(model_idx, gpu_count):
     
     if config.get("trust_remote"): cmd.append("--trust-remote-code")
     if use_eager: cmd.append("--enforce-eager")
+    if config.get("language_model_only"):
+        cmd.extend(["--limit-mm-per-prompt", '{"image": 0, "video": 0}'])
     
     # Env Vars
     env = os.environ.copy()

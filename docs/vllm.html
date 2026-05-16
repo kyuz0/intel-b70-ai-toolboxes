@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script defer data-domain="kyuz0.github.io/intel-b70-ai-toolboxes" src="https://plausible.skybound.link/js/plausible.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intel Arc B70 vLLM Benchmarks</title>
+    <style>
+        :root {
+            --bg-body: #f9fafb;
+            --bg-card: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --primary: #0071c5; /* Intel Blue */
+            --primary-bg: #f0f7fd;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            letter-spacing: -0.05rem;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"],
+        select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-bg);
+        }
+
+        .search {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            margin-bottom: 32px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: #fcfcfc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Table */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th,
+        td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f9fafb;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Columns */
+        .col-model {
+            width: auto;
+        }
+
+        .col-data {
+            text-align: right;
+            width: 1%;
+            white-space: nowrap;
+            font-family: var(--font-mono);
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Model Cell Styling */
+        .model-cell {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .model-name {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .model-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #f3f4f6;
+            color: #4b5563;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Data Styling */
+        .val {
+            font-weight: 600;
+        }
+
+        .val-na {
+            color: #d1d5db;
+            font-weight: 400;
+        }
+
+        .highlight {
+            color: var(--primary);
+        }
+
+        /* Modal/Overlay */
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            width: 90%;
+            max-width: 600px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .modal-section {
+            margin-bottom: 24px;
+        }
+
+        .modal-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .modal-section p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .code-block {
+            background: #f3f4f6;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #374151;
+            margin-top: 8px;
+            white-space: pre-wrap;
+        }
+
+        /* Help Button */
+        .btn-help {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-help:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-bg);
+        }
+
+        .section-title-row {
+            display: flex;
+            align-items: center;
+        }
+
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 400;
+            margin-left: 12px;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .sys-config {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            max-width: 800px;
+        }
+
+        .sys-item {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            align-items: baseline;
+        }
+
+        .sys-label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+        }
+
+        /* Tabs */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Filter Checkboxes */
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 12px;
+            border-left: 1px solid var(--border);
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .check-item input[type="checkbox"] {
+            accent-color: var(--primary);
+        }
+
+        .check-item:hover {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Intel Arc B70 "Battlemage" vLLM Benchmarks</h1>
+            <p class="subtitle">Peak Performance on Intel XPU</p>
+            <p style="margin: 4px 0 0 0; font-size: 0.9rem;">
+                <a href="https://github.com/kyuz0/intel-b70-ai-toolboxes/" target="_blank"
+                    style="color: var(--primary); text-decoration: none;">View on GitHub &rarr;</a>
+                <span style="margin: 0 8px; color: var(--border);">|</span>
+                <a href="index.html"
+                    style="color: var(--text-muted); text-decoration: none; border-bottom: 1px dotted var(--text-muted);">
+                    View llama.cpp Benchmarks
+                </a>
+            </p>
+        </header>
+
+        <div class="controls">
+            <input type="text" id="searchInput" class="search" placeholder="Search models (e.g. 'llama', 'awq')..."
+                autocomplete="off">
+            <select id="quantFilter">
+                <option value="">All Quantizations</option>
+            </select>
+            <div class="filter-group">
+                <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-right:6px;">GPUs:</span>
+                <label class="check-item"><input type="checkbox" id="chkTP1" checked> TP1</label>
+                <label class="check-item" style="display:none;"><input type="checkbox" id="chkTP2"> TP2</label>
+            </div>
+        </div>
+
+        <nav id="tabNav" class="tab-nav">
+            <!-- Dynamic Tabs -->
+        </nav>
+
+        <div id="dashboard">
+            <div id="loading">Loading benchmark results...</div>
+        </div>
+
+        <footer>
+            <div style="font-weight: 600; margin-bottom: 8px;">System Configuration</div>
+            <div class="sys-config">
+                <div class="sys-item">
+                    <span class="sys-label">GPUs</span>
+                    <span>1x Intel Arc Pro B70</span>
+                </div>
+                <div class="sys-item">
+                    <span class="sys-label">Backend</span>
+                    <span>vLLM via Intel XPU (SYCL) Engine</span>
+                </div>
+                <div class="sys-item">
+                    <span class="sys-label">Base Image</span>
+                    <span>intel/llm-scaler-vllm:0.14.0-b8.2.1</span>
+                </div>
+                <div class="sys-item">
+                    <span class="sys-label">OS</span>
+                    <span>Fedora 42 (Linux 6.18.0)</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Benchmark Info</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let rawRuns = [];
+        let tests = [];
+        let state = {
+            search: "",
+            quant: "",
+            activeTab: "Throughput",
+            view: {
+                tp1: true,
+                tp2: false
+            }
+        };
+
+        // Benchmark Metadata
+        const BENCHMARK_INFO = {
+            "Throughput": {
+                short: "Maximum raw compute capacity (Tokens/Sec).",
+                desc: "Measures the absolute maximum number of tokens the system can generate per second by fully saturating the GPU compute capability.",
+                usecase: "Demonstrates the raw horsepower and architectural efficiency of the hardware/model combo under Heavy Load. This is the theoretical speed limit of the system.",
+                details: "Command: `vllm bench throughput`\nParams: --num-prompts 500 --output-len 512\nMetric: Tokens per Second (higher is better).",
+                unit: " tok/s"
+            }
+        };
+
+        const $ = id => document.getElementById(id);
+
+        async function init() {
+            try {
+                const res = await fetch('vllm-results.json');
+                const data = await res.json();
+                rawRuns = data.runs || [];
+                processData();
+                render();
+                populateFilters();
+            } catch (e) {
+                $('loading').textContent = "Waiting for benchmark results. Run parse_vllm_results.py first.";
+                console.error(e);
+            }
+        }
+
+        function processData() {
+            const testGroups = {};
+
+            rawRuns.forEach(run => {
+                if (!run.test) return;
+                if (!testGroups[run.test]) {
+                    testGroups[run.test] = {
+                        name: run.test,
+                        models: {}
+                    };
+                }
+
+                // Normalize model name
+                const modelName = run.model_clean || run.model;
+
+                if (!testGroups[run.test].models[modelName]) {
+                    testGroups[run.test].models[modelName] = {
+                        name: modelName,
+                        quant: run.quant,
+                        params: run.params_b || run.name_params_b,
+                        tp1: null,
+                        tp2: null
+                    };
+                }
+
+                const m = testGroups[run.test].models[modelName];
+
+                // Assign TP value
+                if (run.env === "TP1") m.tp1 = run.tps_mean;
+                if (run.env === "TP2") m.tp2 = run.tps_mean;
+            });
+
+            // Convert map to array for sorting
+            tests = Object.values(testGroups).map(group => {
+                return {
+                    name: group.name,
+                    models: Object.values(group.models)
+                };
+            });
+
+            // Sort tests: Throughput first, then others alphabetically
+            tests.sort((a, b) => {
+                if (a.name === "Throughput") return -1;
+                if (b.name === "Throughput") return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            // Set default tab if not set
+            if (!state.activeTab && tests.length > 0) {
+                state.activeTab = tests[0].name;
+            }
+        }
+
+        function populateFilters() {
+            const quants = new Set(rawRuns.map(r => r.quant).filter(Boolean));
+            const sel = $('quantFilter');
+            [...quants].sort().forEach(q => {
+                const opt = document.createElement('option');
+                opt.value = q;
+                opt.textContent = q;
+                sel.appendChild(opt);
+            });
+
+            $('searchInput').addEventListener('input', e => {
+                state.search = e.target.value.toLowerCase();
+                render();
+            });
+
+            sel.addEventListener('change', e => {
+                state.quant = e.target.value;
+                render();
+            });
+
+            const bindCheck = (id, key) => {
+                $(id).addEventListener('change', e => {
+                    state.view[key] = e.target.checked;
+                    render();
+                });
+            };
+
+            bindCheck('chkTP1', 'tp1');
+            // bindCheck('chkTP2', 'tp2');
+        }
+
+        function getBenchmarkMeta(testName) {
+            if (testName.includes("Throughput")) return BENCHMARK_INFO["Throughput"];
+            return null;
+        }
+
+        function render() {
+            const container = $('dashboard');
+            const tabNav = $('tabNav');
+
+            // Render Tabs
+            tabNav.innerHTML = "";
+            tests.forEach(test => {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${test.name === state.activeTab ? 'active' : ''}`;
+                btn.textContent = test.name;
+                btn.onclick = () => {
+                    state.activeTab = test.name;
+                    render();
+                };
+                tabNav.appendChild(btn);
+            });
+
+            container.innerHTML = "";
+
+            const activeTest = tests.find(t => t.name === state.activeTab);
+
+            if (!activeTest) {
+                container.innerHTML = '<div id="loading">No data available.</div>';
+                return;
+            }
+
+            const test = activeTest;
+
+            const models = test.models.filter(m => {
+                const s = state.search;
+                const matchSearch = !s || m.name.toLowerCase().includes(s);
+
+                const q = state.quant;
+                const matchQuant = !q || m.quant === q;
+
+                return matchSearch && matchQuant;
+            });
+
+            if (models.length === 0) {
+                container.innerHTML = '<div id="loading">No models match current filters in this category.</div>';
+                return;
+            }
+
+            models.sort((a, b) => {
+                const pA = parseFloat(a.params) || 0;
+                const pB = parseFloat(b.params) || 0;
+                if (pA !== pB) return pA - pB;
+                return a.name.localeCompare(b.name);
+            });
+
+            const card = document.createElement('div');
+            card.className = "section-card";
+
+            const meta = getBenchmarkMeta(test.name);
+            const shortDesc = meta ? `<span class="section-desc">${meta.short}</span>` : "";
+            const helpBtn = meta ? `<button class="btn-help" onclick="openModal('${test.name}')">?</button>` : "";
+
+            const header = document.createElement('div');
+            header.className = "section-header";
+            header.innerHTML = `
+            <div class="section-title-row">
+                <h2>${test.name}</h2>
+                ${helpBtn}
+            </div>
+            ${shortDesc}
+        `;
+            card.appendChild(header);
+
+            const tableResp = document.createElement('div');
+            tableResp.className = "table-responsive";
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+
+            let headerHTML = '<tr><th class="col-model">Model</th>';
+
+            if (state.view.tp1) {
+                headerHTML += '<th class="col-data">TP1<br><span style="font-weight:400; font-size:0.85em; text-transform:none;">vLLM</span></th>';
+            }
+            if (state.view.tp2) {
+                headerHTML += '<th class="col-data">TP2<br><span style="font-weight:400; font-size:0.85em; text-transform:none;">vLLM</span></th>';
+            }
+
+            headerHTML += '</tr>';
+            thead.innerHTML = headerHTML;
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            models.forEach(m => {
+                const tr = document.createElement('tr');
+
+                let metaHtml = "";
+                if (m.quant) metaHtml += `<span class="tag">${m.quant}</span>`;
+                if (m.params) metaHtml += `<span class="tag">${m.params}B</span>`;
+
+                const unit = meta ? meta.unit : "";
+
+                let rowHTML = `
+                <td>
+                    <div class="model-cell">
+                        <span class="model-name">${m.name}</span>
+                        <div class="model-meta">${metaHtml}</div>
+                    </div>
+                </td>
+                `;
+
+                if (state.view.tp1) {
+                    const v1 = m.tp1 !== null ? `<span class="val highlight">${m.tp1.toFixed(1)}${unit}</span>` : '<span class="val-na">-</span>';
+                    rowHTML += `<td class="col-data">${v1}</td>`;
+                }
+                if (state.view.tp2) {
+                    const v1 = m.tp2 !== null ? `<span class="val highlight">${m.tp2.toFixed(1)}${unit}</span>` : '<span class="val-na">-</span>';
+                    rowHTML += `<td class="col-data">${v1}</td>`;
+                }
+
+                tr.innerHTML = rowHTML;
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            tableResp.appendChild(table);
+            card.appendChild(tableResp);
+            container.appendChild(card);
+        }
+
+        // Modal Logic
+        function openModal(testName) {
+            const meta = getBenchmarkMeta(testName);
+            if (!meta) return;
+
+            $('modalTitle').textContent = `Metric: ${testName}`;
+
+            let html = `
+            <div class="modal-section">
+                <h4>Description</h4>
+                <p>${meta.desc}</p>
+            </div>
+            `;
+
+            if (meta.usecase) {
+                html += `
+                <div class="modal-section">
+                    <h4>Why it matters</h4>
+                    <p>${meta.usecase}</p>
+                </div>
+                `;
+            }
+
+            if (meta.context) {
+                html += `
+                <div class="modal-section">
+                    <h4>Context & Thresholds</h4>
+                    <p>${meta.context}</p>
+                </div>
+                `;
+            }
+
+            if (meta.details) {
+                html += `
+                <div class="modal-section">
+                    <h4>Execution Details</h4>
+                    <div class="code-block">${meta.details}</div>
+                </div>
+                `;
+            }
+
+            $('modalContent').innerHTML = html;
+            $('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            $('modalOverlay').classList.remove('active');
+        }
+
+        $('modalOverlay').addEventListener('click', e => {
+            if (e.target === $('modalOverlay')) closeModal();
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === "Escape" && $('modalOverlay').classList.contains('active')) closeModal();
+        });
+
+        // Bootstrap
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>

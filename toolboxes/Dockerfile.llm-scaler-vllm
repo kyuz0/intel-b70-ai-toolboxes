@@ -19,7 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iproute2 \
     && rm -rf /var/lib/apt/lists/* \
     && UID_USER=$(getent passwd 1000 | cut -d: -f1) \
-    && if [ -n "$UID_USER" ]; then userdel -r "$UID_USER"; fi
+    && if [ -n "$UID_USER" ]; then userdel -r "$UID_USER"; fi \
+    && sed -i -E 's/^(hosts:.*) dns(.*)/\1\2 dns/' /etc/nsswitch.conf
+
+# Patch vLLM bug where it expects max_pixels on the newer Qwen2VL image processor
+RUN sed -i 's/image_processor.max_pixels/getattr(image_processor, "max_pixels", None)/g' /usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen2_vl.py || true
 
 # Unset any entrypoint from the base image so toolbox can inject its own
 ENTRYPOINT []

@@ -41,7 +41,10 @@ def log(msg): print(f"\n[BENCH] {msg}")
 
 def get_gpu_count():
     try:
-        return len(list(Path("/dev/dri").glob("renderD*")))
+        count = 0
+        for path in Path("/sys/class/drm").glob("renderD*/device/vendor"):
+            if "0x8086" in path.read_text(): count += 1
+        return count if count > 0 else 1
     except:
         return 1
 
@@ -66,7 +69,9 @@ def nuke_vllm_cache():
         except: pass
 
 def get_dataset():
-    data_path = Path("ShareGPT_V3_unfiltered_cleaned_split.json")
+    cache_dir = Path.home() / ".cache" / "sharegpt"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    data_path = cache_dir / "ShareGPT_V3_unfiltered_cleaned_split.json"
     if data_path.exists():
         if data_path.stat().st_size > 100_000_000: # ~540MB expected
             return str(data_path)
@@ -102,7 +107,9 @@ def get_model_args(model, tp_size, overrides=None):
         "--block-size", "64",
         "--tensor-parallel-size", str(tp_size),
         "--max-num-seqs", str(max_seq_override),
-        "--no-enable-prefix-caching"
+        "--no-enable-prefix-caching",
+        "--enable-chunked-prefill",
+        "--disable-custom-all-reduce"
     ]
     
     ctx = overrides.get("ctx", config.get("ctx"))
@@ -116,7 +123,7 @@ def get_model_args(model, tp_size, overrides=None):
     if config.get("trust_remote"): cmd.append("--trust-remote-code")
     use_eager = overrides.get("enforce_eager", config.get("enforce_eager", False))
     if use_eager: cmd.append("--enforce-eager")
-    if config.get("language_model_only"): cmd.append("--language-model-only")
+    if config.get("language_model_only"): cmd.extend(["--limit-mm-per-prompt", '{"image": 0, "video": 0}'])
     
     return cmd
 
