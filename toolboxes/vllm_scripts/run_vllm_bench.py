@@ -220,7 +220,7 @@ def print_summary(tps):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VLLM High-Concurrency Throughput Benchmark Suite for B70")
-    parser.add_argument("--tp", type=int, nargs="+", default=[1])
+    parser.add_argument("--tp", type=int, nargs="+", default=None, help="TP sizes to benchmark (default: auto-detect all valid TPs up to GPU count)")
     parser.add_argument("--tui", action="store_true", help="Launch interactive configuration UI")
     args = parser.parse_args()
     
@@ -228,9 +228,20 @@ if __name__ == "__main__":
     log(f"Detected {gpu_count} Intel GPU(s)")
     log("NOTE: Running Peak Throughput Benchmark. This simulates high-concurrency batching to saturate hardware bandwidth.")
     
-    valid_tp_args = [t for t in args.tp if t <= gpu_count]
+    # Determine which TP sizes to benchmark
+    if args.tp is not None:
+        valid_tp_args = [t for t in args.tp if t <= gpu_count]
+    else:
+        # Auto-detect: collect all unique valid_tp values across all models, capped at GPU count
+        all_tps = set()
+        for m in MODELS_TO_RUN:
+            for tp in MODEL_TABLE.get(m, {}).get("valid_tp", [1]):
+                if tp <= gpu_count:
+                    all_tps.add(tp)
+        valid_tp_args = sorted(all_tps)
+    
     if not valid_tp_args:
-        log(f"Requested TP={args.tp} but only {gpu_count} GPU(s) detected. Nothing to run.")
+        log(f"Requested TP={valid_tp_args} but only {gpu_count} GPU(s) detected. Nothing to run.")
         sys.exit(0)
 
     selected_models = MODELS_TO_RUN

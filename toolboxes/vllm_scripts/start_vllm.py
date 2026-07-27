@@ -66,7 +66,7 @@ def configure_and_launch(model_idx, gpu_count):
     valid_tps = config.get("valid_tp", [1])
     max_tp = max(valid_tps) if valid_tps else 1
     
-    # Defaults
+    # Default TP: use as many GPUs as the model supports (up to hardware count)
     current_tp = min(gpu_count, max_tp)
     current_seqs = int(config.get("max_num_seqs", "128"))
     current_ctx = int(config.get("ctx", "4096"))
@@ -80,11 +80,17 @@ def configure_and_launch(model_idx, gpu_count):
         cache_status = "YES" if clear_cache else "NO"
         eager_status = "YES" if use_eager else "NO"
         
+        # Build TP display string with constraint hint
+        if max_tp < gpu_count:
+            tp_display = f"{current_tp} (max {max_tp} for this model)"
+        else:
+            tp_display = f"{current_tp}"
+        
         menu_args = [
             "--clear", "--backtitle", f"B70 vLLM Launcher (GPUs: {gpu_count} detected)",
             "--title", f"Configuration: {name}",
             "--menu", "Customize Launch Parameters:", "22", "65", "9",
-            "1", f"Tensor Parallelism:   {current_tp}",
+            "1", f"Tensor Parallelism:   {tp_display}",
             "2", f"Concurrent Requests:  {current_seqs}",
             "3", f"Context Length:       {current_ctx}",
             "4", f"GPU Utilization:      {current_util}",
@@ -97,7 +103,8 @@ def configure_and_launch(model_idx, gpu_count):
         if not choice: return False # Back/Cancel
         
         if choice == "1":
-            new_tp = run_dialog(["--title", "Tensor Parallelism", "--rangebox", f"Set TP Size (1-{max_tp})", "10", "40", "1", str(max_tp), str(current_tp)])
+            tp_upper = min(gpu_count, max_tp)
+            new_tp = run_dialog(["--title", "Tensor Parallelism", "--rangebox", f"Set TP Size (1-{tp_upper})", "10", "40", "1", str(tp_upper), str(current_tp)])
             if new_tp: current_tp = int(new_tp)
         elif choice == "2":
             new_seqs = run_dialog(["--title", "Concurrent Requests", "--inputbox", "Max Concurrent Requests:", "10", "40", str(current_seqs)])
