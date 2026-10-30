@@ -1,0 +1,9 @@
+--- a/scripts/build_ext.sh
++++ b/scripts/build_ext.sh
+@@ -15,5 +15,5 @@
+   -fsycl-device-code-split=per_kernel -D_GLIBCXX_USE_CXX11_ABI=1 ${EXL3_FLAGS:-} $DNNL_FLAGS \
+   -I csrc -I$T/include -I$T/include/torch/csrc/api/include \
+   -x c++ csrc/exl3_ops.sycl -x none -o ${EXL3_OUT:-exl3xpu/_C.so} \
+-  -L$T/lib -Wl,-rpath,$T/lib -lc10 -ltorch -ltorch_cpu -lc10_xpu -ltorch_xpu $DNNL_LIBS 2>&1 | grep -E "error" || true
++  -L$T/lib -Wl,-rpath,$T/lib -lc10 -ltorch -ltorch_cpu -lc10_xpu -ltorch_xpu $DNNL_LIBS 2>&1
+ ls -la ${EXL3_OUT:-exl3xpu/_C.so}

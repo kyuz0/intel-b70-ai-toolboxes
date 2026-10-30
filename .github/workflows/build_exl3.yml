@@ -1,0 +1,51 @@
+name: Build EXL3 XPU
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b70-exl3-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: docker.io/kyuz0/intel-b70-vllm-toolbox
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner build space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: toolboxes
+          file: toolboxes/Dockerfile.exl3-xpu
+          platforms: linux/amd64
+          load: true
+          tags: b70-exl3:candidate
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Verify plugin package
+        run: |
+          docker run --rm b70-exl3:candidate python3 -c "from importlib.metadata import entry_points as e; assert any(x.name=='exl3xpu' for x in e(group='vllm.general_plugins'))"
+          docker run --rm b70-exl3:candidate bash -ec 'test -s /opt/exl3xpu/exl3xpu/_C.so; test -s /opt/exl3xpu/models/qwen3.8-27b-exl3-4.00bpw/draft_vocab.json; test "$(cat /opt/b70-provenance/source.txt)" = 15ded2f3add148c4db3c900cba7de878238f53bc'
+      - name: Publish immutable and channel tags
+        run: |
+          docker tag b70-exl3:candidate "$IMAGE:exl3-xpu-${GITHUB_SHA}"
+          docker push "$IMAGE:exl3-xpu-${GITHUB_SHA}"
+          docker tag b70-exl3:candidate "$IMAGE:exl3-xpu"
+          docker push "$IMAGE:exl3-xpu"

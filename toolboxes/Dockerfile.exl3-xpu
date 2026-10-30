@@ -1,0 +1,28 @@
+FROM docker.io/intel/llm-scaler-vllm@sha256:52218ad85513ab6686d4c090c83c2bd8c5b02423c63aa4dabd41837fe641fe3b AS source
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /source
+ARG EXL3_REF=15ded2f3add148c4db3c900cba7de878238f53bc
+RUN git init . && git remote add origin https://github.com/sybil-solutions/exl3xpu.git && git sparse-checkout init --no-cone && printf '%s\n' '/pyproject.toml' '/exl3xpu/' '/csrc/' '/scripts/build_ext.sh' '/models/qwen3.8-27b-exl3-4.00bpw/draft_vocab.json' '/LICENSE' > .git/info/sparse-checkout && git fetch --depth 1 origin ${EXL3_REF} && git checkout --detach FETCH_HEAD && test "$(git rev-parse HEAD)" = "${EXL3_REF}"
+COPY patches/exl3/strict-build.patch /tmp/strict-build.patch
+RUN git apply --check /tmp/strict-build.patch && git apply /tmp/strict-build.patch && git diff --check && mkdir /provenance && git rev-parse HEAD > /provenance/source.txt && cp /tmp/strict-build.patch /provenance/source.patch
+
+FROM docker.io/intel/llm-scaler-vllm@sha256:52218ad85513ab6686d4c090c83c2bd8c5b02423c63aa4dabd41837fe641fe3b
+USER root
+ENV PYTHONNOUSERSITE=1 VLLM_TARGET_DEVICE=xpu VLLM_NO_USAGE_STATS=1
+RUN apt-get update && apt-get install -y --no-install-recommends sudo passwd procps pciutils curl iproute2 libnss-myhostname dialog bash-completion libcap2-bin && rm -rf /var/lib/apt/lists/*
+RUN if getent passwd ubuntu >/dev/null; then test "$(id -u ubuntu)" = 1000 && userdel -r ubuntu; fi
+RUN sed -i -E 's/^(hosts:.*) dns(.*)/\1\2 dns/' /etc/nsswitch.conf
+WORKDIR /opt/exl3xpu
+COPY --from=source /source/pyproject.toml ./
+COPY --from=source /source/exl3xpu ./exl3xpu
+COPY --from=source /source/csrc ./csrc
+COPY --from=source /source/scripts/build_ext.sh ./scripts/build_ext.sh
+COPY --from=source /source/models/qwen3.8-27b-exl3-4.00bpw/draft_vocab.json ./models/qwen3.8-27b-exl3-4.00bpw/draft_vocab.json
+COPY --from=source /source/LICENSE ./LICENSE
+COPY --from=source /provenance /opt/b70-provenance
+RUN bash scripts/build_ext.sh && test -s exl3xpu/_C.so && pip install --no-deps --no-build-isolation -e . && python3 -c "from importlib.metadata import entry_points as e; assert any(x.name=='exl3xpu' for x in e(group='vllm.general_plugins'))"
+RUN dpkg-query -W > /opt/b70-provenance/packages.txt && python3 -m pip freeze > /opt/b70-provenance/python-packages.txt
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
+ENTRYPOINT []
+CMD ["/bin/bash"]
