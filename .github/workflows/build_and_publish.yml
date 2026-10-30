@@ -9,6 +9,10 @@ on:
           Use "all" to build standard backends (sycl, vulkan).
         required: false
         default: all
+      llama_ref:
+        description: llama.cpp commit or branch (recorded in each image)
+        required: false
+        default: master
 
 env:
   DOCKERHUB_REPO: docker.io/kyuz0/intel-b70-ai-toolboxes
@@ -42,6 +46,7 @@ jobs:
   build-and-push:
     needs: prepare
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -74,6 +79,8 @@ jobs:
 
       - name: Build & push ${{ matrix.backend }}
         working-directory: toolboxes
+        env:
+          LLAMA_REF: ${{ inputs.llama_ref || 'master' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -86,16 +93,12 @@ jobs:
           CHN="${DOCKERHUB_REPO}:${NAME}"
 
           echo "→ Building ${DF}"
-          docker build --no-cache -t "${LI}" -f "${DF}" .
+          docker build --no-cache --build-arg "LLAMA_REF=${LLAMA_REF}" -t "${LI}" -f "${DF}" .
 
-          if [[ "${NAME}" != "sycl" ]]; then
-            echo "→ Running smoke test..."
-            docker run --rm "${LI}" llama version
-            docker run --rm "${LI}" llama-cli --help || { status=$?; echo "llama-cli exited with status $status"; [[ $status -eq 0 || $status -eq 1 || $status -eq 134 ]]; }
-            docker run --rm "${LI}" llama-server --help || { status=$?; echo "llama-server exited with status $status"; [[ $status -eq 0 || $status -eq 1 || $status -eq 134 ]]; }
-          else
-            echo "→ Skipping smoke test for sycl backend"
-          fi
+          echo "→ Verify packaged CLI and server (no GPU inference claim)"
+          docker run --rm "${LI}" llama-cli --version
+          docker run --rm "${LI}" llama-cli --help
+          docker run --rm "${LI}" llama-server --help
 
           echo "→ Tag & push immutable → ${IMM}"
           docker tag "${LI}" "${IMM}"

@@ -1,107 +1,19 @@
-# build stage
-FROM registry.fedoraproject.org/fedora:43 AS builder
-
-# intel oneAPI repo
-RUN <<'EOF'
-tee /etc/yum.repos.d/oneAPI.repo <<REPO
-[oneAPI]
-name=Intel® oneAPI repository
-baseurl=https://yum.repos.intel.com/oneapi
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-REPO
-EOF
-
-# deps
-RUN dnf -y --nodocs --setopt=install_weak_deps=False \
-  install \
-  make gcc gcc-c++ cmake ninja-build lld clang clang-devel compiler-rt \
-  intel-oneapi-compiler-dpcpp-cpp intel-oneapi-mkl-devel \
-  intel-compute-runtime intel-level-zero intel-level-zero-devel oneapi-level-zero oneapi-level-zero-devel \
-  git-core vim sudo rsync patch \
-  && dnf clean all && rm -rf /var/cache/dnf/*
-
-# llama.cpp
-WORKDIR /opt/llama.cpp
-ARG REPO=https://github.com/ggerganov/llama.cpp.git
+FROM registry.fedoraproject.org/fedora:44
+ARG REPO=https://github.com/ggml-org/llama.cpp.git
 ARG BRANCH=master
-RUN git clone -b ${BRANCH} --single-branch --recursive ${REPO} .
-
-# build
-RUN git clean -xdf \
-  && git submodule update --recursive \
-  && source /opt/intel/oneapi/setvars.sh \
-  && cmake -S . -B build -G Ninja \
-  -DGGML_SYCL=ON \
-  -DCMAKE_C_COMPILER=icx \
-  -DCMAKE_CXX_COMPILER=icpx \
-  -DGGML_SYCL_F16=ON \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DGGML_RPC=ON \
-  -DLLAMA_BUILD_TESTS=OFF \
-  -DLLAMA_BUILD_EXAMPLES=ON \
-  -DLLAMA_BUILD_SERVER=ON \
-  && cmake --build build --config Release \
-  && cmake --install build --config Release
-
-# libs
-RUN mkdir -p /usr/local/lib64 \
-  && find /opt/llama.cpp/build -type f -name 'lib*.so*' -exec cp {} /usr/local/lib64/ \; \
-  && ldconfig
-
-# helper
+ARG LLAMA_REF=${BRANCH}
+ARG BUILD_JOBS=2
+RUN printf '%s\n' '[oneAPI]' 'name=Intel oneAPI' 'baseurl=https://yum.repos.intel.com/oneapi' 'enabled=1' 'gpgcheck=1' 'repo_gpgcheck=1' 'gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB' > /etc/yum.repos.d/oneAPI.repo
+RUN dnf -y --setopt=install_weak_deps=False install git-core cmake gcc-c++ ninja-build intel-oneapi-compiler-dpcpp-cpp-2026.1 intel-oneapi-libdpstd-devel-2022.13 intel-oneapi-dnnl-devel-2026.0 intel-oneapi-mkl-devel-2026.1 intel-compute-runtime intel-level-zero intel-level-zero-devel oneapi-level-zero oneapi-level-zero-devel libcurl-devel openssl-devel python3 procps-ng pciutils sudo passwd && dnf clean all
+WORKDIR /opt/llama.cpp
+RUN git init . && git remote add origin ${REPO} && git fetch --depth 1 origin ${LLAMA_REF} && git checkout --detach FETCH_HEAD && git submodule update --init --recursive
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/intel/oneapi/setvars.sh && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_RPC=ON -DGGML_SYCL=ON -DGGML_SYCL_F16=ON -DGGML_SYCL_DNN=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DLLAMA_BUILD_TESTS=ON -DLLAMA_BUILD_EXAMPLES=ON -DLLAMA_BUILD_SERVER=ON && cmake --build build -j ${BUILD_JOBS} && cmake --install build
+RUN printf '%s\n' '/usr/local/lib' '/usr/local/lib64' > /etc/ld.so.conf.d/llama.conf && ldconfig && mkdir -p /opt/b70-provenance && rpm -qa | sort > /opt/b70-provenance/packages.txt && git rev-parse HEAD > /opt/b70-provenance/source.txt && cp build/CMakeCache.txt /opt/b70-provenance/ && printf '%s\n' 'source /opt/intel/oneapi/setvars.sh >/dev/null 2>&1' > /etc/profile.d/oneapi.sh
+# Make direct toolbx/Podman exec work without a login-shell dependency.
+RUN source /opt/intel/oneapi/setvars.sh && printf '%s\n' "$LD_LIBRARY_PATH" | tr ':' '\n' | sort -u > /etc/ld.so.conf.d/b70-oneapi.conf && ldconfig
+ENV GGML_SYCL_ENABLE_OPT=0
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
-
-# runtime stage
-FROM registry.fedoraproject.org/fedora:43
-
-# intel oneAPI repo
-RUN <<'EOF'
-tee /etc/yum.repos.d/oneAPI.repo <<REPO
-[oneAPI]
-name=Intel® oneAPI repository
-baseurl=https://yum.repos.intel.com/oneapi
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-REPO
-EOF
-
-# runtime deps
-RUN dnf -y --nodocs --setopt=install_weak_deps=False \
-  install \
-  bash ca-certificates libatomic libstdc++ libgcc sudo hwdata pciutils python3 \
-  intel-oneapi-runtime-dpcpp-cpp intel-oneapi-runtime-mkl intel-oneapi-umf \
-  intel-compute-runtime intel-level-zero oneapi-level-zero \
-  procps-ng vim rsync \
-  && dnf clean all && rm -rf /var/cache/dnf/*
-
-# copy
-COPY --from=builder /usr/local/ /usr/local/
-
-# ld
-RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
-  && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
-  && echo "/opt/intel/oneapi/redist/lib" > /etc/ld.so.conf.d/oneapi.conf \
-  && ls -d /opt/intel/oneapi/umf/*/lib >> /etc/ld.so.conf.d/oneapi.conf || true \
-  && ldconfig \
-  && cp -n /usr/local/lib/lib*.so* /usr/lib64/ 2>/dev/null || true \
-  && cp -n /usr/local/lib64/lib*.so* /usr/lib64/ 2>/dev/null || true \
-  && ldconfig
-
-# helper
-COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
-RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
-
-# profile
-RUN printf '%s\n' \
-  > /etc/profile.d/oneapi.sh && chmod +x /etc/profile.d/oneapi.sh \
-  && echo 'source /opt/intel/oneapi/setvars.sh > /dev/null 2>&1' > /etc/profile.d/oneapi.sh \
-  && echo 'source /etc/profile.d/oneapi.sh' >> /etc/bashrc
-
-# shell
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
 CMD ["/bin/bash"]

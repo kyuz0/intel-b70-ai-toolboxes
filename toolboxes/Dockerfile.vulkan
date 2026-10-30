@@ -1,64 +1,14 @@
-# build stage
-FROM registry.fedoraproject.org/fedora:43 AS builder
-
-# deps
-RUN dnf -y --nodocs --setopt=install_weak_deps=False install \
-  git vim \
-  make gcc cmake ninja-build lld clang clang-devel compiler-rt \
-  vulkan-loader-devel vulkaninfo mesa-vulkan-drivers \
-  spirv-headers-devel glslc patch \
-  && dnf clean all && rm -rf /var/cache/dnf/*
-
-# llama.cpp
-WORKDIR /opt/llama.cpp
-ARG REPO=https://github.com/ggerganov/llama.cpp.git
+FROM registry.fedoraproject.org/fedora:44
+ARG REPO=https://github.com/ggml-org/llama.cpp.git
 ARG BRANCH=master
-RUN git clone -b ${BRANCH} --single-branch --recursive ${REPO} .
-
-# build
-RUN git clean -xdf \
-  && git submodule update --recursive \
-  && cmake -S . -B build -G Ninja \
-  -DGGML_VULKAN=ON \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DGGML_RPC=ON \
-  -DLLAMA_BUILD_EXAMPLES=ON \
-  -DLLAMA_BUILD_SERVER=ON \
-  && cmake --build build --config Release \
-  && cmake --install build --config Release
-
-# libs
-RUN mkdir -p /usr/local/lib64 \
-  && find /opt/llama.cpp/build -type f -name 'lib*.so*' -exec cp {} /usr/local/lib64/ \; \
-  && ldconfig
-
-# helper
+ARG LLAMA_REF=${BRANCH}
+ARG BUILD_JOBS=2
+RUN dnf -y --setopt=install_weak_deps=False install git-core cmake gcc-c++ ninja-build glslc vulkan-headers vulkan-loader-devel vulkan-tools mesa-vulkan-drivers spirv-headers-devel libcurl-devel openssl-devel python3 procps-ng pciutils sudo passwd && dnf clean all
+WORKDIR /opt/llama.cpp
+RUN git init . && git remote add origin ${REPO} && git fetch --depth 1 origin ${LLAMA_REF} && git checkout --detach FETCH_HEAD && git submodule update --init --recursive
+RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_RPC=ON -DGGML_VULKAN=ON -DLLAMA_BUILD_TESTS=ON -DLLAMA_BUILD_EXAMPLES=ON -DLLAMA_BUILD_SERVER=ON -DBUILD_SHARED_LIBS=OFF && cmake --build build -j ${BUILD_JOBS} && cmake --install build
+RUN mkdir -p /opt/b70-provenance && rpm -qa | sort > /opt/b70-provenance/packages.txt && git rev-parse HEAD > /opt/b70-provenance/source.txt && cp build/CMakeCache.txt /opt/b70-provenance/
 COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
 RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
-
-# runtime stage
-FROM registry.fedoraproject.org/fedora-minimal:43
-
-# runtime deps
-RUN microdnf -y --nodocs --setopt=install_weak_deps=0 install \
-  bash ca-certificates libatomic libstdc++ libgcc sudo libgomp python3 \
-  vulkan-loader vulkan-loader-devel vulkaninfo mesa-vulkan-drivers procps-ng \
-  && microdnf clean all && rm -rf /var/cache/dnf/*
-
-# copy
-COPY --from=builder /usr/local/ /usr/local/
-
-# ld
-RUN echo "/usr/local/lib"  > /etc/ld.so.conf.d/local.conf \
-  && echo "/usr/local/lib64" >> /etc/ld.so.conf.d/local.conf \
-  && ldconfig \
-  && cp -n /usr/local/lib/lib*.so* /usr/lib64/ 2>/dev/null || true \
-  && cp -n /usr/local/lib64/lib*.so* /usr/lib64/ 2>/dev/null || true \
-  && ldconfig
-
-# helper
-COPY gguf-vram-estimator.py /usr/local/bin/gguf-vram-estimator.py
-RUN chmod +x /usr/local/bin/gguf-vram-estimator.py
-
-# shell
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
 CMD ["/bin/bash"]
