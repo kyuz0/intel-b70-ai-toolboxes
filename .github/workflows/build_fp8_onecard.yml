@@ -1,0 +1,47 @@
+name: Build single-B70 FP8
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b70-fp8-onecard-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: docker.io/kyuz0/intel-b70-vllm-toolbox
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner build space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Normalize pinned publisher manifest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+          python3 toolboxes/fp8_scripts/normalize_base.py --destination docker-daemon:localhost/b70-fp8-base:normalized --work-dir "$RUNNER_TEMP"
+      - name: Build candidate
+        run: docker build --build-arg BASE_IMAGE=localhost/b70-fp8-base:normalized -t b70-fp8:candidate -f toolboxes/Dockerfile.fp8-onecard toolboxes
+      - name: Verify packaged overlays and provenance
+        run: |
+          docker run --rm b70-fp8:candidate python3 -m compileall -q /overlay
+          docker run --rm b70-fp8:candidate python3 -c "from importlib.metadata import version; print(version('vllm'))"
+          docker run --rm b70-fp8:candidate bash -ec 'test -s /opt/draft-shortlists/shortlist-u-v1all-v2top65k.txt; test "$(cat /opt/b70-provenance/overlay-source.txt)" = fddfe964dab1eac909410bf5263163dd77d19ab5'
+      - name: Publish immutable and channel tags
+        run: |
+          docker tag b70-fp8:candidate "$IMAGE:fp8-onecard-${GITHUB_SHA}"
+          docker push "$IMAGE:fp8-onecard-${GITHUB_SHA}"
+          docker tag b70-fp8:candidate "$IMAGE:fp8-onecard"
+          docker push "$IMAGE:fp8-onecard"
