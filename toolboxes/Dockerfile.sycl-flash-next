@@ -1,0 +1,17 @@
+FROM registry.fedoraproject.org/fedora:44
+ARG BUILD_JOBS=2
+RUN printf '%s\n' '[oneAPI]' 'name=Intel oneAPI' 'baseurl=https://yum.repos.intel.com/oneapi' 'enabled=1' 'gpgcheck=1' 'repo_gpgcheck=1' 'gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB' > /etc/yum.repos.d/oneAPI.repo
+RUN dnf -y --setopt=install_weak_deps=False install git-core cmake gcc-c++ ninja-build intel-oneapi-compiler-dpcpp-cpp-2026.1 intel-oneapi-libdpstd-devel-2022.13 intel-oneapi-dnnl-devel-2026.0 intel-oneapi-mkl-devel-2026.1 intel-compute-runtime intel-level-zero intel-level-zero-devel oneapi-level-zero oneapi-level-zero-devel libcurl-devel openssl-devel python3 procps-ng pciutils sudo passwd && dnf clean all
+ARG LLAMA_REF=52d42686560a9e8f441f9b9780c8890c37d2802d
+WORKDIR /opt/llama.cpp
+RUN git init . && git remote add origin https://github.com/ggml-org/llama.cpp.git && git fetch --depth 1 origin ${LLAMA_REF} && git checkout --detach FETCH_HEAD && test "$(git rev-parse HEAD)" = "${LLAMA_REF}"
+COPY patches/flash-next/ /opt/b70-patches/
+RUN git apply --check /opt/b70-patches/qwen4exp-mtp-draft-head.patch && git apply /opt/b70-patches/qwen4exp-mtp-draft-head.patch && git apply --check /opt/b70-patches/sycl-fused-mmvq-mt.patch && git apply /opt/b70-patches/sycl-fused-mmvq-mt.patch && git diff --check
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/intel/oneapi/setvars.sh && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DGGML_SYCL=ON -DGGML_SYCL_F16=OFF -DGGML_NATIVE=OFF -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DLLAMA_BUILD_SERVER=ON -DLLAMA_BUILD_TESTS=ON && cmake --build build --target llama-server llama-bench -j ${BUILD_JOBS}
+RUN mkdir -p /usr/local/bin /usr/local/lib && cp build/bin/llama-server build/bin/llama-bench /usr/local/bin/ && find build -name 'lib*.so*' -exec cp -a {} /usr/local/lib/ \; && printf '%s\n' '/usr/local/lib' > /etc/ld.so.conf.d/llama.conf
+RUN source /opt/intel/oneapi/setvars.sh && printf '%s\n' "$LD_LIBRARY_PATH" | tr ':' '\n' | sort -u > /etc/ld.so.conf.d/b70-oneapi.conf && ldconfig
+RUN mkdir -p /opt/b70-provenance && rpm -qa | sort > /opt/b70-provenance/packages.txt && git rev-parse HEAD > /opt/b70-provenance/source.txt && git diff > /opt/b70-provenance/source.patch && cp build/CMakeCache.txt /opt/b70-provenance/
+ENV GGML_SYCL_ENABLE_OPT=1 LLAMA_ATTN_ROT_DISABLE=1 SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=0 SYCL_CACHE_PERSISTENT=0 SYCL_DEVICE_FILTER=level_zero ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
+CMD ["/bin/bash"]
