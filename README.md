@@ -6,6 +6,23 @@ This project provides pre-built containers (“toolboxes”) for running LLMs on
 
 ---
 
+## Qwen3.8 episode: run through Cockpit
+
+Use [AI Toolbox Cockpit](https://github.com/kyuz0/ai-toolbox-cockpit) to install these images, download the compatible model/quantization and choose the one/two-B70 serving profile. The [B70 setup guide](https://github.com/kyuz0/ai-toolbox-cockpit/blob/main/docs/INTEL_B70.md) includes embedded and separate MTP heads, Strata preparation, and GPU selection.
+
+| Public image | Episode configuration |
+| --- | --- |
+| `docker.io/kyuz0/intel-b70-vllm-toolbox:upstream` | Upstream vLLM0.31/NEO26.35: 27B RedHatAI INT4 on one/two B70s; official FP8 on two; MTP3 |
+| `docker.io/kyuz0/intel-b70-vllm-toolbox:latest` | Intel LLM Scaler0.26.0-b2: 27B INT4 baseline on one B70 |
+| `docker.io/kyuz0/intel-b70-vllm-toolbox:exl3-xpu` | Experimental EXL3 4.00bpw on one B70; MTP3; prefix caching off |
+| `docker.io/kyuz0/intel-b70-vllm-toolbox:fp8-onecard` | Experimental Optimization Lab official FP8 on one B70; CPU embeddings/MTP5; prefix caching off |
+| `docker.io/kyuz0/intel-b70-ai-toolboxes:sycl` | 27B UD-Q4_K_XL, baseline/MTP3, F16 KV, optimized weight path disabled |
+| `docker.io/kyuz0/intel-b70-ai-toolboxes:vulkan` | 27B UD-Q4_K_XL, baseline/MTP3, F16 KV |
+| `docker.io/kyuz0/intel-b70-ai-toolboxes:sycl-flash-next` | Patched Flash Next AtomicChat AD4.27 plus Q4 MTP on two B70s |
+| `docker.io/kyuz0/intel-b70-ai-toolboxes:strata-sycl` | Strata Flash Next AtomicChat native pack plus official Q2 MTP on two B70s |
+
+Each engine has a build workflow under [Actions](https://github.com/kyuz0/intel-b70-ai-toolboxes/actions). Flash Next, Strata and EXL3 pin their source revisions; the Optimization Lab image packages its pinned publisher binary and matching Python overlays. Its workflow performs the required manifest normalization before the container build. Standard llama.cpp builds accept a `llama_ref` input for reproducing an exact source revision and retain the existing rolling default.
+
 ## Table of Contents
 
 - [Interactive Benchmarks](#interactive-benchmarks)
@@ -28,7 +45,7 @@ You can check the containers on DockerHub: [kyuz0/intel-b70-ai-toolboxes](https:
 
 | Container / Repo | Backend/Stack | Purpose / Notes |
 | :--- | :--- | :--- |
-| `kyuz0/intel-b70-ai-toolboxes:sycl` | Intel oneAPI SYCL | Native Intel backend for llama.cpp. Fastest generation performance, utilizes Level Zero. Requires Intel oneAPI Base Toolkit components installed inside the container. |
+| `kyuz0/intel-b70-ai-toolboxes:sycl` | Intel oneAPI SYCL | Native Intel backend for llama.cpp using Level Zero. Includes oneAPI and the GPU runtime; the Qwen3.8 27B profile disables the optimized weight path. |
 | `kyuz0/intel-b70-ai-toolboxes:vulkan` | Vulkan (Mesa/Intel) | Universal backend for llama.cpp using Vulkan. Recommended for compatibility across different host setups and older Intel hardware. |
 | `kyuz0/intel-b70-ai-toolboxes:openvino` | Intel OpenVINO | OpenVINO backend for llama.cpp. Translates GGML graphs into OpenVINO for Intel-optimized inference on CPUs and GPUs. Auto-configured to target the discrete GPU with stateful KV cache. |
 | `kyuz0/intel-b70-vllm-toolbox:latest` | Intel vLLM Scaler | Official Intel vLLM stack optimized for Arc Pro B70, featuring an interactive TUI launcher (`start-vllm`). |
