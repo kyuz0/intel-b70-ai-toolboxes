@@ -1,42 +1,19 @@
-FROM intel/llm-scaler-vllm:0.14.0-b8.2.1
-
-# Prevent python from picking up host packages in ~/.local when toolbox mounts the home directory
-ENV PYTHONNOUSERSITE=1
-
-# Install standard packages for toolbox/distrobox support
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
-    passwd \
-    curl \
-    wget \
-    vim \
-    nano \
-    pciutils \
-    dialog \
-    bash-completion \
-    libcap2-bin \
-    libnss-myhostname \
-    iproute2 \
-    && rm -rf /var/lib/apt/lists/* \
-    && UID_USER=$(getent passwd 1000 | cut -d: -f1) \
-    && if [ -n "$UID_USER" ]; then userdel -r "$UID_USER"; fi \
-    && sed -i -E 's/^(hosts:.*) dns(.*)/\1\2 dns/' /etc/nsswitch.conf
-
-# Patch vLLM bug where it expects max_pixels on the newer Qwen2VL image processor
-RUN sed -i 's/image_processor.max_pixels/getattr(image_processor, "max_pixels", None)/g' /usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen2_vl.py || true
-
-# Unset any entrypoint from the base image so toolbox can inject its own
-ENTRYPOINT []
-
-# Add any custom configuration or scripts
+ARG BASE_IMAGE=docker.io/intel/llm-scaler-vllm:0.26.0-b2
+FROM ${BASE_IMAGE}
+ENV PYTHONNOUSERSITE=1 VLLM_TARGET_DEVICE=xpu VLLM_NO_USAGE_STATS=1
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends sudo passwd procps pciutils curl iproute2 libnss-myhostname dialog bash-completion libcap2-bin wget vim nano && rm -rf /var/lib/apt/lists/*
+# Toolbx creates the host user; Ubuntu's placeholder otherwise occupies UID 1000.
+RUN if getent passwd ubuntu >/dev/null; then test "$(id -u ubuntu)" = 1000 && userdel -r ubuntu; fi
+RUN sed -i -E 's/^(hosts:.*) dns(.*)/\1\2 dns/' /etc/nsswitch.conf
+RUN mkdir -p /opt/b70-provenance && dpkg-query -W > /opt/b70-provenance/packages.txt && python3 -m pip freeze > /opt/b70-provenance/python-packages.txt
+ENV B70_STACK=llm-scaler
+# Preserve the existing interactive launcher alongside Cockpit Server Mode.
 COPY vllm_scripts/99-toolbox-banner.sh /etc/profile.d/99-toolbox-banner.sh
 COPY vllm_scripts/start_vllm.py /opt/start_vllm.py
 COPY vllm_scripts/models.py /opt/models.py
 COPY vllm_scripts/run_vllm_bench.py /opt/run_vllm_bench.py
-
-RUN chmod +x /etc/profile.d/99-toolbox-banner.sh /opt/start_vllm.py /opt/run_vllm_bench.py && \
-    ln -s /opt/start_vllm.py /usr/local/bin/start-vllm && \
-    ln -s /opt/run_vllm_bench.py /usr/local/bin/run-vllm-bench
-
-# Set bash as the default entrypoint, required for toolbox/distrobox
+RUN chmod +x /etc/profile.d/99-toolbox-banner.sh /opt/start_vllm.py /opt/run_vllm_bench.py && ln -s /opt/start_vllm.py /usr/local/bin/start-vllm && ln -s /opt/run_vllm_bench.py /usr/local/bin/run-vllm-bench
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
+ENTRYPOINT []
 CMD ["/bin/bash"]
