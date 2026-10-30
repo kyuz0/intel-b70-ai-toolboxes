@@ -1,0 +1,52 @@
+name: Build Strata SYCL
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b70-strata-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: docker.io/kyuz0/intel-b70-ai-toolboxes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner build space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: toolboxes
+          file: toolboxes/Dockerfile.strata-sycl
+          platforms: linux/amd64
+          load: true
+          tags: b70-strata:candidate
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Verify packaged launchers and linked runtime
+        run: |
+          docker run --rm b70-strata:candidate strata-serve --help
+          docker run --rm b70-strata:candidate strata-prepare --help
+          docker run --rm b70-strata:candidate bash -ec 'test -x /opt/strata/build/strata; ldd /opt/strata/build/strata > /tmp/linked; cat /tmp/linked; ! grep -q "not found" /tmp/linked; cat /opt/b70-provenance/strata-source.txt'
+      - name: Publish immutable and channel tags
+        run: |
+          docker tag b70-strata:candidate "$IMAGE:strata-sycl-${GITHUB_SHA}"
+          docker push "$IMAGE:strata-sycl-${GITHUB_SHA}"
+          docker tag b70-strata:candidate "$IMAGE:strata-sycl"
+          docker push "$IMAGE:strata-sycl"

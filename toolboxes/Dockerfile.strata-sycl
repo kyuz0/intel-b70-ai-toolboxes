@@ -1,0 +1,18 @@
+FROM registry.fedoraproject.org/fedora:44
+ARG STRATA_REF=011c9e600a93bbc9fd451c563501b5831c32bbca
+ARG BUILD_JOBS=2
+RUN printf '%s\n' '[oneAPI]' 'name=Intel oneAPI' 'baseurl=https://yum.repos.intel.com/oneapi' 'enabled=1' 'gpgcheck=1' 'repo_gpgcheck=1' 'gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB' > /etc/yum.repos.d/oneAPI.repo
+RUN dnf -y --setopt=install_weak_deps=False install git-core cmake gcc-c++ ninja-build intel-oneapi-compiler-dpcpp-cpp-2026.1 intel-oneapi-libdpstd-devel-2022.13 intel-oneapi-dnnl-devel-2026.0 intel-oneapi-mkl-devel-2026.1 intel-compute-runtime intel-level-zero intel-level-zero-devel oneapi-level-zero oneapi-level-zero-devel libcurl-devel openssl-devel python3 python3-numpy python3-jinja2 python3-regex python3-pyyaml python3-requests python3-psutil python3-pillow python3-tqdm procps-ng pciutils sudo passwd && dnf clean all
+WORKDIR /opt/strata
+RUN git init . && git remote add origin https://github.com/Niko1221/Strata.git && git fetch --depth 1 origin ${STRATA_REF} && git checkout --detach FETCH_HEAD && test "$(git rev-parse HEAD)" = "${STRATA_REF}"
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/intel/oneapi/setvars.sh && cmake -S sycl -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DSTRATA_SYCL_AOT=bmg-g31 && cmake --build build --target strata -j ${BUILD_JOBS}
+RUN source /opt/intel/oneapi/setvars.sh && printf '%s\n' "$LD_LIBRARY_PATH" | tr ':' '\n' | sort -u > /etc/ld.so.conf.d/b70-oneapi.conf && ldconfig
+RUN mkdir -p /opt/b70-provenance && rpm -qa | sort > /opt/b70-provenance/packages.txt && git rev-parse HEAD > /opt/b70-provenance/strata-source.txt && cp build/CMakeCache.txt /opt/b70-provenance/ && ln -s /opt/strata/build/strata /usr/local/bin/strata
+ENV PYTHONPATH=/opt/strata STRATA_GGUF_PY=/opt/strata/build/_deps/strata_llamacpp-src/gguf-py
+ENV ONEAPI_DEVICE_SELECTOR=level_zero:* SYCL_CACHE_PERSISTENT=0 STRATA_MIRROR_MIB=0
+COPY strata_scripts/serve.py /usr/local/bin/strata-serve
+COPY strata_scripts/prepare.py /usr/local/bin/strata-prepare
+RUN chmod +x /usr/local/bin/strata-serve /usr/local/bin/strata-prepare
+LABEL org.opencontainers.image.source="https://github.com/kyuz0/intel-b70-ai-toolboxes"
+CMD ["/bin/bash"]
