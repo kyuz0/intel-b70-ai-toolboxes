@@ -1,0 +1,77 @@
+name: Build Trellis XPU
+
+on:
+  workflow_dispatch:
+    inputs:
+      trellis_ref:
+        description: trellis-serve branch, tag or full commit to build
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b70-trellis-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: docker.io/kyuz0/intel-b70-vllm-toolbox
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve Trellis source
+        id: source
+        env:
+          TRELLIS_REF: ${{ inputs.trellis_ref }}
+        run: |
+          set -euo pipefail
+          git init /tmp/trellis-source
+          git -C /tmp/trellis-source remote add origin https://github.com/sybil-solutions/trellis-serve.git
+          git -C /tmp/trellis-source fetch --depth 1 origin "$TRELLIS_REF"
+          SOURCE_SHA=$(git -C /tmp/trellis-source rev-parse FETCH_HEAD)
+          echo "sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Trellis source: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Free runner build space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: toolboxes
+          file: toolboxes/Dockerfile.trellis-xpu
+          platforms: linux/amd64
+          load: true
+          build-args: TRELLIS_REF=${{ steps.source.outputs.sha }}
+          tags: b70-trellis:candidate
+          labels: |
+            org.opencontainers.image.source=https://github.com/sybil-solutions/trellis-serve
+            org.opencontainers.image.revision=${{ steps.source.outputs.sha }}
+            io.github.kyuz0.toolbox.revision=${{ github.sha }}
+      - name: Verify plugin package
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          docker run --rm b70-trellis:candidate python3 -c "from importlib.metadata import entry_points as e; assert any(x.name=='exl3xpu' for x in e(group='vllm.general_plugins'))"
+          docker run --rm -e SOURCE_SHA b70-trellis:candidate bash -ec 'test -s /opt/trellis-xpu/exl3xpu/_C.so; test -s /opt/trellis-xpu/models/qwen3.8-27b-exl3-4.00bpw/draft_vocab.json; test "$(cat /opt/b70-provenance/source.txt)" = "$SOURCE_SHA"'
+      - name: Test shared core
+        run: docker run --rm b70-trellis:candidate bash -ec 'pip install pytest==8.4.2; cd /opt/trellis-core; python3 -m pytest -q'
+      - name: Publish immutable and channel tags
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          docker tag b70-trellis:candidate "$IMAGE:trellis-xpu-${SOURCE_SHA}-${GITHUB_RUN_ID}"
+          docker push "$IMAGE:trellis-xpu-${SOURCE_SHA}-${GITHUB_RUN_ID}"
+          docker tag b70-trellis:candidate "$IMAGE:trellis-xpu"
+          docker push "$IMAGE:trellis-xpu"

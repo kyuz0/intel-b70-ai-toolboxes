@@ -1,0 +1,25 @@
+FROM docker.io/intel/llm-scaler-vllm@sha256:52218ad85513ab6686d4c090c83c2bd8c5b02423c63aa4dabd41837fe641fe3b AS source
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /source
+ARG TRELLIS_REF=a1f72be2ff6319b9b2ea9bf6768c99664b1ca892
+RUN git init . && git remote add origin https://github.com/sybil-solutions/trellis-serve.git && git sparse-checkout init --no-cone && printf '%s\n' '/core/' '/xpu/' '/LICENSE' > .git/info/sparse-checkout && git fetch --depth 1 origin ${TRELLIS_REF} && git checkout --detach FETCH_HEAD && test "$(git rev-parse HEAD)" = "${TRELLIS_REF}"
+COPY patches/trellis/strict-build.patch /tmp/strict-build.patch
+RUN git apply --check --directory=xpu /tmp/strict-build.patch && git apply --directory=xpu /tmp/strict-build.patch && git diff --check && mkdir /provenance && git rev-parse HEAD > /provenance/source.txt && cp /tmp/strict-build.patch /provenance/source.patch
+
+FROM docker.io/intel/llm-scaler-vllm@sha256:52218ad85513ab6686d4c090c83c2bd8c5b02423c63aa4dabd41837fe641fe3b
+USER root
+ENV PYTHONNOUSERSITE=1 VLLM_TARGET_DEVICE=xpu VLLM_NO_USAGE_STATS=1
+RUN apt-get update && apt-get install -y --no-install-recommends sudo passwd procps pciutils curl iproute2 libnss-myhostname dialog bash-completion libcap2-bin && rm -rf /var/lib/apt/lists/*
+RUN if getent passwd ubuntu >/dev/null; then test "$(id -u ubuntu)" = 1000 && userdel -r ubuntu; fi
+RUN sed -i -E 's/^(hosts:.*) dns(.*)/\1\2 dns/' /etc/nsswitch.conf
+COPY --from=source /source/core /opt/trellis-core
+COPY --from=source /source/xpu /opt/trellis-xpu
+COPY --from=source /source/LICENSE /opt/trellis-LICENSE
+COPY --from=source /provenance /opt/b70-provenance
+WORKDIR /opt/trellis-xpu
+RUN pip install --no-deps --no-build-isolation -e /opt/trellis-core && bash scripts/build_ext.sh && test -s exl3xpu/_C.so && pip install --no-deps --no-build-isolation -e . && python3 -c "import trellis_core; from importlib.metadata import entry_points as e; assert any(x.name=='exl3xpu' for x in e(group='vllm.general_plugins'))"
+RUN dpkg-query -W > /opt/b70-provenance/packages.txt && python3 -m pip freeze > /opt/b70-provenance/python-packages.txt
+LABEL org.opencontainers.image.source="https://github.com/sybil-solutions/trellis-serve"
+ENTRYPOINT []
+CMD ["/bin/bash"]

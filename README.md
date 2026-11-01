@@ -14,14 +14,14 @@ Use [AI Toolbox Cockpit](https://github.com/kyuz0/ai-toolbox-cockpit) to install
 | --- | --- |
 | `docker.io/kyuz0/intel-b70-vllm-toolbox:upstream` | Upstream vLLM0.31/NEO26.35: 27B RedHatAI INT4 on one/two B70s; official FP8 on two; MTP3 |
 | `docker.io/kyuz0/intel-b70-vllm-toolbox:latest` | Intel LLM Scaler0.26.0-b2: 27B INT4 baseline on one B70 |
-| `docker.io/kyuz0/intel-b70-vllm-toolbox:exl3-xpu` | Experimental EXL3 4.00bpw on one B70; MTP3; prefix caching off |
+| `docker.io/kyuz0/intel-b70-vllm-toolbox:trellis-xpu` | Experimental Trellis EXL3 4.00bpw on one B70; MTP3; prefix caching off |
 | `docker.io/kyuz0/intel-b70-vllm-toolbox:fp8-onecard` | Experimental Optimization Lab official FP8 on one B70; CPU embeddings/MTP5; prefix caching off |
 | `docker.io/kyuz0/intel-b70-ai-toolboxes:sycl` | 27B UD-Q4_K_XL, baseline/MTP3, F16 KV, optimized weight path disabled |
 | `docker.io/kyuz0/intel-b70-ai-toolboxes:vulkan` | 27B UD-Q4_K_XL, baseline/MTP3, F16 KV |
 | `docker.io/kyuz0/intel-b70-ai-toolboxes:sycl-flash-next` | Patched Flash Next AtomicChat AD4.27 plus Q4 MTP on two B70s |
 | `docker.io/kyuz0/intel-b70-ai-toolboxes:strata-sycl` | Strata Flash Next AtomicChat native pack plus official Q2 MTP on two B70s |
 
-Each engine has a build workflow under [Actions](https://github.com/kyuz0/intel-b70-ai-toolboxes/actions). Flash Next, Strata and EXL3 pin their source revisions; the Optimization Lab image packages its pinned publisher binary and matching Python overlays. Its workflow performs the required manifest normalization before the container build. Standard llama.cpp builds accept a `llama_ref` input for reproducing an exact source revision and retain the existing rolling default.
+Each engine has a build workflow under [Actions](https://github.com/kyuz0/intel-b70-ai-toolboxes/actions). Trellis builds from [trellis-serve](https://github.com/sybil-solutions/trellis-serve), the successor to EXL3-XPU. Its workflow resolves the selected upstream branch, tag or commit once and records the exact revision in the image. Flash Next and Strata pin their source revisions; the Optimization Lab image packages its pinned publisher binary and matching Python overlays. Its workflow performs the required manifest normalization before the container build. Standard llama.cpp builds accept a `llama_ref` input for reproducing an exact source revision and retain the existing rolling default.
 
 ## Table of Contents
 
